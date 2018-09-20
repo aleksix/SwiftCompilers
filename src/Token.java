@@ -20,8 +20,6 @@ public class Token {
         CURLY_R,
         SQUARE_L,
         SQUARE_R,
-        ARROW_R,
-        ARROW_L,
 
         DOT,
         COMMA,

@@ -13,9 +13,9 @@ public class SwiftSpecials {
             "return", "switch", "where", "while",
             "defer", "guard", "repeat",
             // Expressions
-            "as", "dynamicType", "is", "nil",
-            "self", "Self", "super", "Any",
-            "catch", "rethrows", "throw", "throws", "try",
+            "as", "dynamicType", "is", "self", "Self",
+            "super", "Any", "catch", "rethrows", "throw",
+            "throws", "try"
     };
 
     static final String[] expressionLiterals = {
