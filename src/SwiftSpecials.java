@@ -16,8 +16,6 @@ public class SwiftSpecials {
             "as", "dynamicType", "is", "nil",
             "self", "Self", "super", "Any",
             "catch", "rethrows", "throw", "throws", "try",
-            // Special
-            "_"
     };
 
     static final String[] expressionLiterals = {
@@ -25,6 +23,15 @@ public class SwiftSpecials {
             "#column", "#function", "#dsohandle", "#sourceLocation", "#warning",
             "#error", "#if", "#else", "#elseif", "#endif",
             "#available", "#fileLiteral", "#imageLiteral", "#colorLiteral"
+    };
+
+    static final String[] contextSensitive = {
+            "associativity", "convenience", "dynamic", "didSet", "final",
+            "get", "infix", "indirect", "lazy", "left",
+            "mutating", "none", "nonmutating", "optional", "override",
+            "postfix", "precedence", "prefix", "Protocol", "required",
+            "right", "set", "Type", "unowned", "weak",
+            "willSet"
     };
 
 
@@ -42,5 +49,9 @@ public class SwiftSpecials {
 
     public static boolean isExpressionLiteral(String identifier) {
         return isContainedIn(identifier, expressionLiterals);
+    }
+
+    public static boolean isContextSensitive(String identifier) {
+        return isContainedIn(identifier, contextSensitive);
     }
 }

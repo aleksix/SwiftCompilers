@@ -43,6 +43,13 @@ public class SwiftLexer extends Lexer {
             }
         }
 
+        lastPos = input.getPosition();
+        prevSymbol = currentSymbol;
+        currentSymbol = input.peek();
+
+        if (SymbolClasses.isIdentifierHead(currentSymbol))
+            return getIdentifier();
+
         switch (currentSymbol) {
 
         }
