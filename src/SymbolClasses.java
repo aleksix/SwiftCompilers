@@ -11,6 +11,19 @@ public class SymbolClasses {
     }
 
     public static boolean isIdentifierSymbol(int character) {
+        if (isIdentifierHead(character))
+            return true;
+            // 0(U+0030) - 9 (U+0039)
+        else if (character >= 0x0030 && character <= 0x0039)
+            return true;
+        else if (character >= 0x0300 && character <= 0x036F)
+            return true;
+        else if (character >= 0x1DC0 && character <= 0x1DFF)
+            return true;
+        else if (character >= 0x20D0 && character <= 0x20FF)
+            return true;
+        else if (character >= 0xFE20 && character <= 0xFE2F)
+            return true;
         return false;
     }
 
@@ -21,8 +34,11 @@ public class SymbolClasses {
     // Not sure if the following functions are needed, just copied the official docs.
     public static boolean isIdentifierHead(int character) {
         //Ranges
-        // A(U+0041)-Za-z(U+007A)
-        if (character >= 0x0041 && character <= 0x007A)
+        // A(U+0041)-Z(U+005A)
+        if (character >= 0x0041 && character <= 0x005A)
+            return true;
+            // a(U+0061)-z(U+007A)
+        else if (character >= 0x0061 && character <= 0x007A)
             return true;
         else if (character >= 0x00B2 && character <= 0x00B5)
             return true;
@@ -117,6 +133,7 @@ public class SymbolClasses {
         switch (character) {
             case 0x00A8:
             case 0x00AA:
+            case 0x005F:
             case 0x00AD:
             case 0x00AF:
             case 0x2054:
