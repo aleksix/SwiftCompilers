@@ -1,3 +1,4 @@
+/*
 public class OldSwiftLexer extends Lexer {
     // Needed as a sort of a small state machine
     private enum NumType {
@@ -282,3 +283,4 @@ public class OldSwiftLexer extends Lexer {
         return null;
     }
 }
+*/

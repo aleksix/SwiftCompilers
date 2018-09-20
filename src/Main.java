@@ -2,7 +2,7 @@ import java.util.ArrayList;
 
 public class Main {
     public static void main(String[] args) throws LexingError {
-        Lexer lex = new OldSwiftLexer(new StringSource(
+        Lexer lex = new SwiftLexer(new StringSource(
                 "/* My first program in Swift 4 */\r\n" +
                         "// With comments!\r\n" +
                         "var myString = \"Hello, World!\"\r\n" +

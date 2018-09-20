@@ -16,14 +16,38 @@ public class SwiftLexer extends Lexer {
         prevSymbol = currentSymbol;
         currentSymbol = input.peek();
 
+        while (SymbolClasses.isWhitespace(currentSymbol) || currentSymbol == '/') {
+            if (currentSymbol == '/') {
+                prevSymbol = currentSymbol;
+                currentSymbol = input.consume();
+                if (currentSymbol == '/') {
+                    while (!SymbolClasses.isLinebreak(currentSymbol)) {
+                        prevSymbol = currentSymbol;
+                        currentSymbol = input.consume();
+                    }
+                    currentSymbol = input.consume();
+                } else if (currentSymbol == '*') {
+                    while (prevSymbol != '*' || currentSymbol != '/') {
+                        prevSymbol = currentSymbol;
+                        currentSymbol = input.consume();
+                    }
+                    currentSymbol = input.consume();
+                } else {
+                    return getOperatorLiteral();
+                }
+            } else {
+                while (SymbolClasses.isWhitespace(currentSymbol)) {
+                    prevSymbol = currentSymbol;
+                    currentSymbol = input.consume();
+                }
+            }
+        }
+
         switch (currentSymbol) {
 
         }
 
         return null;
-    }
-
-    void ignoreCommentsAndWhitespace() {
     }
 
     Token getIdentifier() {
@@ -42,7 +66,7 @@ public class SwiftLexer extends Lexer {
         return null;
     }
 
-    Token getOperatorLiteral(int prevCharacter) {
+    Token getOperatorLiteral() {
         return null;
     }
 }
