@@ -1,5 +1,9 @@
 import java.util.ArrayList;
 
+/*
+  This code MUST be documented, covered by unit-tests and refactored, in this particular order.
+  Right now, everything mostly works, but it's horrible and dirty under the hood, which is unacceptable
+ */
 public class SwiftLexer extends Lexer {
     // Needed as a sort of a small state machine
     private enum NumType {
