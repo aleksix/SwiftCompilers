@@ -27,7 +27,7 @@ public class SwiftLexer extends Lexer {
     }
 
     // Utility functions
-    boolean escapable(int character) {
+    private boolean escapable(int character) {
         return (character == '0' || character == '\\' || character == 't' || character == 'n' || character == 'r'
                 || character == '"' || character == '\'');
     }
@@ -40,6 +40,12 @@ public class SwiftLexer extends Lexer {
         return null;
     }
 
+    // More reliable than remembering to always do these 2 things
+    private void advance() {
+        prevSymbol = currentSymbol;
+        currentSymbol = input.consume();
+    }
+
     // Lexing functions
     @Override
     Token getToken() throws LexingError {
@@ -49,27 +55,23 @@ public class SwiftLexer extends Lexer {
 
         while (SymbolClasses.isWhitespace(currentSymbol) || currentSymbol == '/') {
             if (currentSymbol == '/') {
-                prevSymbol = currentSymbol;
-                currentSymbol = input.consume();
+                advance();
                 if (currentSymbol == '/') {
                     while (!SymbolClasses.isLinebreak(currentSymbol)) {
-                        prevSymbol = currentSymbol;
-                        currentSymbol = input.consume();
+                        advance();
                     }
-                    currentSymbol = input.consume();
+                    advance();
                 } else if (currentSymbol == '*') {
                     while (prevSymbol != '*' || currentSymbol != '/') {
-                        prevSymbol = currentSymbol;
-                        currentSymbol = input.consume();
+                        advance();
                     }
-                    currentSymbol = input.consume();
+                    advance();
                 } else {
                     return getOperatorLiteral();
                 }
             } else {
                 while (SymbolClasses.isWhitespace(currentSymbol)) {
-                    prevSymbol = currentSymbol;
-                    currentSymbol = input.consume();
+                    advance();
                 }
             }
         }
@@ -100,17 +102,17 @@ public class SwiftLexer extends Lexer {
 
         if (backtick) {
             builder.append((char) currentSymbol);
-            currentSymbol = input.consume();
+            advance();
         }
         while (SymbolClasses.isIdentifierSymbol(currentSymbol)) {
             builder.append((char) currentSymbol);
-            currentSymbol = input.consume();
+            advance();
         }
 
         if (backtick) {
             if (currentSymbol == '`' && builder.length() > 1) {
                 builder.append((char) currentSymbol);
-                currentSymbol = input.consume();
+                advance();
             } else
                 throw new LexingError();
         } else {
@@ -151,12 +153,11 @@ public class SwiftLexer extends Lexer {
 
         StringBuilder builder = new StringBuilder();
         builder.append((char) currentSymbol);
-        prevSymbol = currentSymbol;
-        input.consume();
+        advance();
         // Variable for mandatory symbols after special such as 0b... or e+...
         boolean checkSymbol = true;
         //Check the beginning prefix
-        switch (input.peek()) {
+        switch (currentSymbol) {
             case 'x':
                 numType = NumType.HEX_INTEGER;
                 curSymbols = hexSymbols;
@@ -182,7 +183,7 @@ public class SwiftLexer extends Lexer {
         // This one assumes that all prefixed numbers need checking. Might not be the case later.
         if (checkSymbol) {
             builder.append((char) input.peek());
-            input.consume();
+            advance();
         }
 
         boolean done = false;
@@ -204,7 +205,7 @@ public class SwiftLexer extends Lexer {
             if (curSymbols.indexOf(currentSymbol) != -1 || currentSymbol == '_') {
                 // If everything is okay, just add the symbol
                 builder.append((char) currentSymbol);
-                input.consume();
+                advance();
             } else if (currentSymbol == 'e' || currentSymbol == 'E') {
                 // Check if we are dealing with a float now
                 // In this case - E is not a part of the symbols
@@ -215,7 +216,7 @@ public class SwiftLexer extends Lexer {
                 else
                     throw new LexingError();
                 builder.append((char) currentSymbol);
-                input.consume();
+                advance();
                 optionalPostfix = exponentPostfix;
                 checkSymbol = true;
             } else if (currentSymbol == 'p' || currentSymbol == 'P') {
@@ -225,7 +226,7 @@ public class SwiftLexer extends Lexer {
                 else
                     throw new LexingError();
                 builder.append((char) currentSymbol);
-                input.consume();
+                advance();
                 optionalPostfix = exponentPostfix;
                 checkSymbol = true;
             } else if (currentSymbol == '.') {
@@ -238,7 +239,7 @@ public class SwiftLexer extends Lexer {
                 else
                     throw new LexingError();
                 builder.append((char) currentSymbol);
-                input.consume();
+                advance();
             } else if (currentSymbol == '-' || currentSymbol == '+') {
                 checkSymbol = true;
                 // Check the stuff for the exponent
@@ -251,7 +252,7 @@ public class SwiftLexer extends Lexer {
                 } else
                     throw new LexingError();
                 builder.append((char) currentSymbol);
-                input.consume();
+                advance();
             } else
                 done = true;
         }
