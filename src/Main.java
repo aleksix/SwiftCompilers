@@ -12,10 +12,12 @@ public class Main {
                         "print(15e10)\r\n"
         ));
 
+        Lexer test = new SwiftLexer(new StringSource("\"Hello world! \\(3)\\(4)\""));
+
         ArrayList<Token> toks = new ArrayList<>();
         Token t = null;
         do {
-            t = lex.getToken();
+            t = test.getToken();
             if (t != null)
                 toks.add(t);
         } while (t != null);

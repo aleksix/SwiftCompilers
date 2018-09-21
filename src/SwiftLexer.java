@@ -26,18 +26,25 @@ public class SwiftLexer extends Lexer {
         interpolations = new ArrayList<>();
     }
 
-    // Utility functions
-    private boolean escapable(int character) {
-        return (character == '0' || character == '\\' || character == 't' || character == 'n' || character == 'r'
-                || character == '"' || character == '\'');
+    /*
+     * Utility functions
+     */
+    private boolean singleEscapable(int character) {
+        return (multilineEscapable(character) || character == '"');
     }
 
-    public Token[] getInterpolatedExpression(Token interpolatedString) {
+    private boolean multilineEscapable(int character) {
+        return (character == '0' || character == '\\' || character == 't' || character == 'n' || character == 'r'
+                || character == '\'');
+    }
+
+    public ArrayList<Token[]> getInterpolatedExpression(Token interpolatedString) {
+        ArrayList<Token[]> out = new ArrayList<>();
         for (Pair<Token, Token[]> expression : interpolations) {
             if (expression.first.equals(interpolatedString))
-                return expression.second;
+                out.add(expression.second);
         }
-        return null;
+        return out;
     }
 
     // More reliable than remembering to always do these 2 things
@@ -46,7 +53,51 @@ public class SwiftLexer extends Lexer {
         currentSymbol = input.consume();
     }
 
-    // Lexing functions
+    private void parseInterpolation(Token curToken) throws LexingError {
+        // Bracket counter, to know when to exit, currently just 1 bracket
+        int brackets = 1;
+        // Expression buffer
+        StringBuilder expression = new StringBuilder();
+        // Parsed tokens
+        ArrayList<Token> parsed = new ArrayList<>();
+        Token token = null;
+        Lexer expressionLexer;
+
+        while (brackets > 0 && currentSymbol != -1) {
+            advance();
+            if (currentSymbol == ')')
+                brackets--;
+            else
+                expression.append((char) currentSymbol);
+        }
+
+        expressionLexer = new SwiftLexer(new StringSource(expression.toString()));
+
+        do {
+            token = expressionLexer.getToken();
+            if (token != null)
+                parsed.add(token);
+        } while (token != null);
+
+        interpolations.add(new Pair<Token, Token[]>(curToken, parsed.toArray(new Token[0])));
+    }
+
+    private int parseUnicodeEscape() {
+        final String hexSymbols = "0123456789abcdefABCDEF";
+        StringBuilder builder = new StringBuilder();
+        while (currentSymbol != '}' && builder.length() < 8) {
+            if (hexSymbols.contains(Character.toString((char) currentSymbol)))
+                builder.append((char) currentSymbol);
+            else
+                return -1;
+            advance();
+        }
+        return Integer.parseInt(builder.toString(), 16);
+    }
+
+    /*
+     * Lexing functions
+     */
     @Override
     Token getToken() throws LexingError {
         lastPos = input.getPosition();
@@ -132,8 +183,142 @@ public class SwiftLexer extends Lexer {
 
     // Not sure if we should throw an exception or do something else in case of unescaped sequences.
     Token getStringLiteral() throws LexingError {
-        // TODO: Find a way to deal with interpolated strings
-        return null;
+        StringBuilder builder = new StringBuilder();
+        builder.append((char) currentSymbol);
+        advance();
+        // Yes, prevPrev. Can't think of a more elegant way for now.
+        int prevPrevSymbol = -1;
+        Token.TokenType tokType = Token.TokenType.STRING_LITERAL;
+        // Needed for indexing into the interpolated string array. Not sure if that's a good idea
+        Token out = new Token(tokType, lastPos);
+
+        boolean multiline = false;
+
+        // Check the type of string - multiline, single-line
+        if (currentSymbol == '"') {
+            // Multiline string
+            builder.append((char) currentSymbol);
+            advance();
+            if (currentSymbol != '"') {
+                // Empty single-line string, actually.
+                return new Token(Token.TokenType.STRING_LITERAL, lastPos, builder.toString());
+            }
+            multiline = true;
+            builder.append((char) currentSymbol);
+            advance();
+            // We need to ignore the first linebreak after the quotes
+            if (currentSymbol == '\r') {
+                advance();
+                advance();
+            } else if (currentSymbol == '\n') {
+                advance();
+            } else {
+                // TODO: ELABORATE
+                // Multiline strings MUST begin and end with newlines.
+                throw new LexingError();
+            }
+        }
+        // First character
+        builder.append((char) currentSymbol);
+        while ((multiline && (prevPrevSymbol != '"' || prevSymbol != '"'))
+                || (!multiline && prevSymbol == '\\') || currentSymbol != '"') {
+
+            // EOF before the string is closed
+            if (currentSymbol == -1)
+                throw new LexingError();
+            else if (!multiline && (SymbolClasses.isLinebreak(currentSymbol)))
+                // Single-line strings can't contain linefeeds and carriage returns
+                throw new LexingError();
+
+            // For multi-line strings we need to ignore carriage returns, as per the standard
+            if (prevSymbol == '\r' && currentSymbol == '\n') {
+                builder.deleteCharAt(builder.length() - 2);
+            }
+
+            prevPrevSymbol = prevSymbol;
+            advance();
+            if (currentSymbol == '\\') {
+                // Escaping characters
+                advance();
+                if (multiline && SymbolClasses.isLinebreak(currentSymbol)) {
+                    // Putting a backslash at the end of the multiline string line ignores the linebreak
+                    advance();
+                    // CRLF uses 2 symbols, others use 1
+                    if (prevSymbol == '\r' && currentSymbol == '\n')
+                        advance();
+                } else if (currentSymbol == '(') {
+                    // Interpolated string. Buffer the expression and lex it.
+                    tokType = Token.TokenType.INTERPOLATED_STRING;
+                    parseInterpolation(out);
+                } else if (currentSymbol == 'u') {
+                    // Unicode value. Makes no sense to leave it as-is, so we parse and add it.
+                    int unicodeValue = -1;
+
+                    advance();
+                    if (currentSymbol != '{')
+                        throw new LexingError();
+
+                    advance();
+                    unicodeValue = parseUnicodeEscape();
+
+                    if (unicodeValue == -1)
+                        throw new LexingError();
+                    if (currentSymbol != '}')
+                        throw new LexingError();
+
+                    advance();
+                    builder.append((char) unicodeValue);
+                } else {
+                    // Check if the sequence requires escaping
+                    if ((multiline && !multilineEscapable(currentSymbol))
+                            || (!multiline && !singleEscapable(currentSymbol)))
+                        // TODO: ELABORATE
+                        throw new LexingError();
+                    else
+                        builder.append((char) currentSymbol);
+                }
+            } else {
+                builder.append((char) currentSymbol);
+            }
+        }
+        builder.append((char) currentSymbol);
+        advance();
+
+        if (multiline) {
+            // Get lines for processing indent
+            String[] lines = builder.toString().split("\n");
+            String last = lines[lines.length - 1];
+            String indent = "";
+
+            // Multiline strings MUST begin and end with newlines.
+            if (!last.trim().startsWith("\"\"\""))
+                throw new LexingError();
+
+            indent = last.substring(0, last.indexOf("\"\"\""));
+
+            if (indent.length() > 0) {
+                int pos;
+                for (int c = lines.length - 1; c >= 0; c--) {
+                    pos = builder.indexOf(lines[c]);
+                    if (lines[c].startsWith("\"\"\"")) {
+                        lines[c] = lines[c].substring(3);
+                        pos += 3;
+                    }
+                    if (lines[c].trim().length() > 0) {
+                        if (lines[c].startsWith(indent)) {
+                            builder.delete(pos, pos + indent.length());
+                        }
+                    }
+                }
+            }
+
+            // A bit hacky, but much simpler. The last linebreak doesn't count too.
+            int lastLineBreak = builder.lastIndexOf("\n");
+            builder.delete(lastLineBreak, lastLineBreak + 1);
+        }
+        out.type = tokType;
+        out.value = builder.toString();
+        return out;
     }
 
     Token getNumberLiteral() throws LexingError {
@@ -237,9 +422,11 @@ public class SwiftLexer extends Lexer {
                 else if (numType == NumType.HEX_INTEGER)
                     numType = NumType.HEX_FLOAT;
                 else
-                    throw new LexingError();
-                builder.append((char) currentSymbol);
-                advance();
+                    done = true;
+                if (!done) {
+                    builder.append((char) currentSymbol);
+                    advance();
+                }
             } else if (currentSymbol == '-' || currentSymbol == '+') {
                 checkSymbol = true;
                 // Check the stuff for the exponent
@@ -250,9 +437,11 @@ public class SwiftLexer extends Lexer {
                     if (prevSymbol != 'p' && prevSymbol != 'P')
                         throw new LexingError();
                 } else
-                    throw new LexingError();
-                builder.append((char) currentSymbol);
-                advance();
+                    done = true;
+                if (!done) {
+                    builder.append((char) currentSymbol);
+                    advance();
+                }
             } else
                 done = true;
         }
