@@ -27,4 +27,9 @@ public class StringSource implements Source {
             return input.charAt(position);
         return -1;
     }
+
+    @Override
+    public void reset() {
+        position = 0;
+    }
 }

@@ -95,6 +95,13 @@ public class SwiftLexer extends Lexer {
         return Integer.parseInt(builder.toString(), 16);
     }
 
+    // Yes, I do hat myself for this. No, I don't have a better solution. Thanks, Java!
+    private void skipTo(int position) {
+        input.reset();
+        while (input.getPosition() != position)
+            input.consume();
+    }
+
     /*
      * Lexing functions
      */
@@ -140,6 +147,8 @@ public class SwiftLexer extends Lexer {
         switch (currentSymbol) {
             case '"':
                 return getStringLiteral();
+            case '#':
+                return getExpressionLiteral();
         }
 
         return null;
@@ -182,6 +191,7 @@ public class SwiftLexer extends Lexer {
     }
 
     // Not sure if we should throw an exception or do something else in case of unescaped sequences.
+    // TODO : According to Apple, there should be no trailing escaped newlines near the end of the multiline strings
     Token getStringLiteral() throws LexingError {
         StringBuilder builder = new StringBuilder();
         builder.append((char) currentSymbol);
@@ -469,7 +479,24 @@ public class SwiftLexer extends Lexer {
     }
 
     Token getExpressionLiteral() {
-        return null;
+        StringBuilder builder = new StringBuilder();
+        builder.append((char) currentSymbol);
+        // Consume the leading pound
+        advance();
+        if (SymbolClasses.isIdentifierHead(currentSymbol)) {
+            builder.append((char) currentSymbol);
+            advance();
+        }
+        while (SymbolClasses.isIdentifierSymbol(currentSymbol)) {
+            builder.append((char) currentSymbol);
+            advance();
+        }
+        if (SwiftSpecials.isExpressionLiteral(builder.toString())) {
+            return new Token(Token.TokenType.EXPRESSION_LITERAL, lastPos, builder.toString());
+        }
+        skipTo(lastPos + 1);
+        // This method is somewhat bad, but that's what Apple uses in it's lexer, so it can be important
+        return new Token(Token.TokenType.POUND, lastPos, "#");
     }
 
     Token getOperatorLiteral() {

@@ -5,4 +5,6 @@ public interface Source {
     int getPosition();
 
     int peek();
+
+    void reset();
 }

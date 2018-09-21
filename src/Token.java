@@ -28,7 +28,7 @@ public class Token {
         SEMICOLON,
         EQUAL,
         AT,
-        HASH,
+        POUND,
         AMPERSAND,
         ARROW,
         BACKTICK,

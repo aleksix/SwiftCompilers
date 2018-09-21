@@ -40,4 +40,14 @@ public class FileSource implements Source {
             consume();
         return next_character;
     }
+
+    @Override
+    public void reset() {
+        try {
+            input.reset();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        position = 0;
+    }
 }
