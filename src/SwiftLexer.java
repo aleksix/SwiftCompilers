@@ -264,6 +264,59 @@ public class SwiftLexer extends Lexer {
     }
 
     Token getOperatorLiteral() {
+             StringBuilder builder = new StringBuilder();
+        boolean dotStart = false;
+        boolean prefix = false, postfix = false;
+
+        prefix = prevSymbol != ' ' && prevSymbol != '\r' &&
+                prevSymbol != '\n' && prevSymbol != '\t' &&
+                prevSymbol != '(' && prevSymbol != '[' &&
+                prevSymbol != '{' && prevSymbol != ',' &&
+                prevSymbol != ';' && prevSymbol != ':' &&
+                prevSymbol != '\0';
+
+
+        if (SymbolClasses.isOperatorHead(currentSymbol)) {
+            if (currentSymbol == '.') {
+                dotStart = true;
+            }
+            builder.append((char) currentSymbol);
+            currentSymbol = input.consume();
+        }
+        while (SymbolClasses.isOperatorSymbol(currentSymbol)) {
+            if (currentSymbol == '!' || currentSymbol == '?') {
+                break;
+            } else if (currentSymbol == '.' && !dotStart) {
+                break;
+            } else if (builder.length() > 2) {
+                if (currentSymbol == '/' || currentSymbol == '*' && prevSymbol == '/') break;
+            } else {
+                builder.append((char) currentSymbol);
+                currentSymbol = input.consume();
+            }
+        }
+        int nextSymbol = input.consume();
+        postfix = nextSymbol != ' ' && nextSymbol != '\r' &&
+                nextSymbol != '\n' && nextSymbol != '\t' &&
+                nextSymbol != ')' && nextSymbol != ']' &&
+                nextSymbol != '}' && nextSymbol != ',' &&
+                nextSymbol != ';' && nextSymbol != ':' && (nextSymbol != '.' || !prefix);
+
+        String operator = builder.toString();
+        if (operator.length() == 1){
+            if (operator == "="){
+                if (prefix != postfix) {
+                    return new Token(Token.TokenType.EQUAL, lastPos, operator);
+                }
+            }
+            if (operator == "&"){
+                if (prefix == postfix || prefix){
+                    return new Token(Token.TokenType.AMPERSAND, lastPos, operator);
+                }
+            }
+
+        }
+
         return null;
     }
 
