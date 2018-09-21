@@ -17,6 +17,7 @@ public class SwiftLexer extends Lexer {
     private int currentSymbol;
     private int prevSymbol;
     private ArrayList<Pair<Token, Token[]>> interpolations;
+    private ArrayList<String> errors;
 
     SwiftLexer(Source input) {
         super(input);
@@ -24,6 +25,7 @@ public class SwiftLexer extends Lexer {
         lastPos = -1;
         prevSymbol = -1;
         interpolations = new ArrayList<>();
+        errors = new ArrayList<>();
     }
 
     /*
@@ -53,7 +55,7 @@ public class SwiftLexer extends Lexer {
         currentSymbol = input.consume();
     }
 
-    private void parseInterpolation(Token curToken) throws LexingError {
+    private void parseInterpolation(Token curToken) {
         // Bracket counter, to know when to exit, currently just 1 bracket
         int brackets = 1;
         // Expression buffer
@@ -106,7 +108,7 @@ public class SwiftLexer extends Lexer {
      * Lexing functions
      */
     @Override
-    Token getToken() throws LexingError {
+    Token getToken() {
         lastPos = input.getPosition();
         prevSymbol = currentSymbol;
         currentSymbol = input.peek();
@@ -154,7 +156,7 @@ public class SwiftLexer extends Lexer {
         return null;
     }
 
-    Token getIdentifier() throws LexingError {
+    Token getIdentifier() {
         StringBuilder builder = new StringBuilder();
         // Swift allows to use keywords as identifiers if they are surrounded by backticks ('`')
         boolean backtick = (currentSymbol == '`');
@@ -173,8 +175,16 @@ public class SwiftLexer extends Lexer {
             if (currentSymbol == '`' && builder.length() > 1) {
                 builder.append((char) currentSymbol);
                 advance();
-            } else
-                throw new LexingError();
+            } else {
+                if (builder.length() == 1)
+                    errors.add("Empty backtick identifier at " + Integer.toString(input.getPosition()));
+                if (currentSymbol != '`') {
+                    errors.add("No backtick at the end of an identifier starting with backtick at"
+                            + Integer.toString(input.getPosition()));
+                    // Attempt to fix the issue
+                    builder.append('`');
+                }
+            }
         } else {
             String contents = builder.toString();
             if (SwiftSpecials.isKeyword(contents))
@@ -190,9 +200,8 @@ public class SwiftLexer extends Lexer {
         return new Token(type, lastPos, builder.toString());
     }
 
-    // Not sure if we should throw an exception or do something else in case of unescaped sequences.
     // TODO : According to Apple, there should be no trailing escaped newlines near the end of the multiline strings
-    Token getStringLiteral() throws LexingError {
+    Token getStringLiteral() {
         StringBuilder builder = new StringBuilder();
         builder.append((char) currentSymbol);
         advance();
@@ -223,9 +232,8 @@ public class SwiftLexer extends Lexer {
             } else if (currentSymbol == '\n') {
                 advance();
             } else {
-                // TODO: ELABORATE
-                // Multiline strings MUST begin and end with newlines.
-                throw new LexingError();
+                errors.add("Multiline strings delimiter must be separated from the string by a newline at " +
+                        Integer.toString(input.getPosition()));
             }
         }
         // First character
@@ -233,65 +241,85 @@ public class SwiftLexer extends Lexer {
         while ((multiline && (prevPrevSymbol != '"' || prevSymbol != '"'))
                 || (!multiline && prevSymbol == '\\') || currentSymbol != '"') {
 
-            // EOF before the string is closed
-            if (currentSymbol == -1)
-                throw new LexingError();
-            else if (!multiline && (SymbolClasses.isLinebreak(currentSymbol)))
-                // Single-line strings can't contain linefeeds and carriage returns
-                throw new LexingError();
-
-            // For multi-line strings we need to ignore carriage returns, as per the standard
-            if (prevSymbol == '\r' && currentSymbol == '\n') {
-                builder.deleteCharAt(builder.length() - 2);
-            }
-
             prevPrevSymbol = prevSymbol;
             advance();
-            if (currentSymbol == '\\') {
-                // Escaping characters
-                advance();
-                if (multiline && SymbolClasses.isLinebreak(currentSymbol)) {
-                    // Putting a backslash at the end of the multiline string line ignores the linebreak
-                    advance();
-                    // CRLF uses 2 symbols, others use 1
-                    if (prevSymbol == '\r' && currentSymbol == '\n')
-                        advance();
-                } else if (currentSymbol == '(') {
-                    // Interpolated string. Buffer the expression and lex it.
-                    tokType = Token.TokenType.INTERPOLATED_STRING;
-                    parseInterpolation(out);
-                } else if (currentSymbol == 'u') {
-                    // Unicode value. Makes no sense to leave it as-is, so we parse and add it.
-                    int unicodeValue = -1;
 
-                    advance();
-                    if (currentSymbol != '{')
-                        throw new LexingError();
-
-                    advance();
-                    unicodeValue = parseUnicodeEscape();
-
-                    if (unicodeValue == -1)
-                        throw new LexingError();
-                    if (currentSymbol != '}')
-                        throw new LexingError();
-
-                    advance();
-                    builder.append((char) unicodeValue);
-                } else {
-                    // Check if the sequence requires escaping
-                    if ((multiline && !multilineEscapable(currentSymbol))
-                            || (!multiline && !singleEscapable(currentSymbol)))
-                        // TODO: ELABORATE
-                        throw new LexingError();
-                    else
-                        builder.append((char) currentSymbol);
+            // EOF before the string is closed
+            if (currentSymbol == -1) {
+                errors.add("EOF before the string literal is read at " + Integer.toString(input.getPosition()));
+                // We are always missing at least 1 quote
+                builder.append('"');
+                if (multiline) {
+                    if (currentSymbol != '"')
+                        builder.append('"');
+                    if (prevSymbol != '"')
+                        builder.append('"');
                 }
-            } else {
-                builder.append((char) currentSymbol);
+                currentSymbol = '"';
+                prevSymbol = '"';
+                currentSymbol = '"';
+            } else if (!multiline && (SymbolClasses.isLinebreak(currentSymbol)))
+                // Single-line strings can't contain linefeeds and carriage returns
+                errors.add("Single-line strings can't contain linefeeds and carriage returns at "
+                        + Integer.toString(input.getPosition()));
+            else {
+
+                // For multi-line strings we need to ignore carriage returns, as per the standard
+                if (prevSymbol == '\r' && currentSymbol == '\n') {
+                    builder.deleteCharAt(builder.length() - 2);
+                }
+
+                if (currentSymbol == '\\') {
+                    // Escaping characters
+                    advance();
+                    if (multiline && SymbolClasses.isLinebreak(currentSymbol)) {
+                        // Putting a backslash at the end of the multiline string line ignores the linebreak
+                        advance();
+                        // CRLF uses 2 symbols, others use 1
+                        if (prevSymbol == '\r' && currentSymbol == '\n')
+                            advance();
+                    } else if (currentSymbol == '(') {
+                        // Interpolated string. Buffer the expression and lex it.
+                        tokType = Token.TokenType.INTERPOLATED_STRING;
+                        parseInterpolation(out);
+                    } else if (currentSymbol == 'u') {
+                        // Unicode value. Makes no sense to leave it as-is, so we parse and add it.
+                        int unicodeValue = -1;
+
+                        advance();
+                        if (currentSymbol != '{') {
+                            errors.add("{ expected after \\u at " + Integer.toString(input.getPosition()));
+                        } else {
+                            advance();
+                        }
+                        unicodeValue = parseUnicodeEscape();
+
+                        if (unicodeValue == -1) {
+                            errors.add("Incorrect unicode pattern at " + Integer.toString(input.getPosition()));
+                            // Kinda bad, but at least helps a bit
+                            unicodeValue = 32;
+                        }
+                        if (currentSymbol != '}')
+                            errors.add("} expected at the end of \\u at " + Integer.toString(input.getPosition()));
+                        else {
+                            advance();
+                        }
+
+                        builder.append((char) unicodeValue);
+                    } else {
+                        // Check if the sequence requires escaping
+                        if ((multiline && !multilineEscapable(currentSymbol))
+                                || (!multiline && !singleEscapable(currentSymbol)))
+                            errors.add("Unknown escape sequence at " + Integer.toString(input.getPosition()));
+                        else
+                            builder.append((char) currentSymbol);
+                    }
+                } else {
+                    builder.append((char) currentSymbol);
+                }
             }
         }
-        builder.append((char) currentSymbol);
+        // Consume the last quote
         advance();
 
         if (multiline) {
@@ -301,8 +329,15 @@ public class SwiftLexer extends Lexer {
             String indent = "";
 
             // Multiline strings MUST begin and end with newlines.
-            if (!last.trim().startsWith("\"\"\""))
-                throw new LexingError();
+            if (!last.trim().startsWith("\"\"\"") ||
+                    (last.trim().startsWith("\"\"\"") && last.trim().endsWith("\"\"\""))) {
+                errors.add("Multiline string end delimiter must be separated by a newline at"
+                        + Integer.toString(input.getPosition()));
+                // Try to fix the problem and split the string again
+                builder.insert(builder.length() - 3, '\n');
+                lines = builder.toString().split("\n");
+                last = lines[lines.length - 1];
+            }
 
             indent = last.substring(0, last.indexOf("\"\"\""));
 
@@ -324,14 +359,16 @@ public class SwiftLexer extends Lexer {
 
             // A bit hacky, but much simpler. The last linebreak doesn't count too.
             int lastLineBreak = builder.lastIndexOf("\n");
-            builder.delete(lastLineBreak, lastLineBreak + 1);
+            if (lastLineBreak != -1) {
+                builder.delete(lastLineBreak, lastLineBreak + 1);
+            }
         }
         out.type = tokType;
         out.value = builder.toString();
         return out;
     }
 
-    Token getNumberLiteral() throws LexingError {
+    Token getNumberLiteral() {
         final String intSymbols = "0123456789";
         final String hexSymbols = "0123456789abcdefABCDEF";
         final String octSymbols = "01234567";
@@ -370,9 +407,10 @@ public class SwiftLexer extends Lexer {
                 break;
         }
 
-        if (prevSymbol != '0' && numType != NumType.INTEGER)
-            // TODO: ELABORATE
-            throw new LexingError();
+        if (prevSymbol != '0' && numType != NumType.INTEGER) {
+            errors.add("Non-decimal numbers must start with a 0 at " + Integer.toString(input.getPosition()));
+            builder.replace(0, 1, "0");
+        }
 
         // NOTE : Not sure if good for the future. Numbers probably won't change, but still
         // This one assumes that all prefixed numbers need checking. Might not be the case later.
@@ -389,10 +427,10 @@ public class SwiftLexer extends Lexer {
             currentSymbol = input.peek();
             if (checkSymbol)
                 if (optionalPostfix.indexOf(currentSymbol) == -1)
-                    if (curSymbols.indexOf(currentSymbol) == -1)
-                        // TODO : ELABORATE
-                        throw new LexingError();
-                    else
+                    if (curSymbols.indexOf(currentSymbol) == -1) {
+                        errors.add("Incorrect digit at " + Integer.toString(input.getPosition()));
+                        continue;
+                    } else
                         checkSymbol = false;
                 else
                     optionalPostfix = "";
@@ -408,8 +446,10 @@ public class SwiftLexer extends Lexer {
                     numType = NumType.FLOAT_EXPONENT;
                 else if (numType == NumType.FLOAT_DOT)
                     numType = NumType.FLOAT_COMBO;
-                else
-                    throw new LexingError();
+                else {
+                    errors.add("Incorrect decimal exponent symbol at " + Integer.toString(input.getPosition()));
+                    continue;
+                }
                 builder.append((char) currentSymbol);
                 advance();
                 optionalPostfix = exponentPostfix;
@@ -419,7 +459,7 @@ public class SwiftLexer extends Lexer {
                 if (numType == NumType.HEX_INTEGER)
                     numType = NumType.HEX_FLOAT;
                 else
-                    throw new LexingError();
+                    errors.add("Incorrect hexadecimal exponent symbol at" + Integer.toString(input.getPosition()));
                 builder.append((char) currentSymbol);
                 advance();
                 optionalPostfix = exponentPostfix;
@@ -442,10 +482,10 @@ public class SwiftLexer extends Lexer {
                 // Check the stuff for the exponent
                 if (numType == NumType.FLOAT_EXPONENT || numType == NumType.FLOAT_COMBO) {
                     if (prevSymbol != 'e' && prevSymbol != 'E')
-                        throw new LexingError();
+                        return new Token(Token.TokenType.FLOAT_LITERAL, lastPos, builder.toString());
                 } else if (numType == NumType.HEX_FLOAT) {
                     if (prevSymbol != 'p' && prevSymbol != 'P')
-                        throw new LexingError();
+                        return new Token(Token.TokenType.FLOAT_LITERAL, lastPos, builder.toString());
                 } else
                     done = true;
                 if (!done) {

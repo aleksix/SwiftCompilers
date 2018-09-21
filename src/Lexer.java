@@ -1,9 +1,5 @@
 import java.io.File;
 
-class LexingError extends Exception {
-
-}
-
 public abstract class Lexer {
     protected Source input;
     protected int current = 0;
@@ -14,5 +10,5 @@ public abstract class Lexer {
         this.input = input;
     }
 
-    abstract Token getToken() throws LexingError;
+    abstract Token getToken();
 }
