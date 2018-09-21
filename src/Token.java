@@ -5,6 +5,7 @@ public class Token {
         CONTEXT_KEYWORD,            // Context-dependent keyword
 
         STRING_LITERAL,
+        INTERPOLATED_STRING,        // Strings with expressions in them
         INT_LITERAL,
         FLOAT_LITERAL,
         EXPRESSION_LITERAL,

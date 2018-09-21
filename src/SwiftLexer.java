@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+
 public class SwiftLexer extends Lexer {
     // Needed as a sort of a small state machine
     private enum NumType {
@@ -14,14 +16,31 @@ public class SwiftLexer extends Lexer {
     private int lastPos;
     private int currentSymbol;
     private int prevSymbol;
+    private ArrayList<Pair<Token, Token[]>> interpolations;
 
     SwiftLexer(Source input) {
         super(input);
         currentSymbol = -1;
         lastPos = -1;
         prevSymbol = -1;
+        interpolations = new ArrayList<>();
     }
 
+    // Utility functions
+    boolean escapable(int character) {
+        return (character == '0' || character == '\\' || character == 't' || character == 'n' || character == 'r'
+                || character == '"' || character == '\'');
+    }
+
+    public Token[] getInterpolatedExpression(Token interpolatedString) {
+        for (Pair<Token, Token[]> expression : interpolations) {
+            if (expression.first.equals(interpolatedString))
+                return expression.second;
+        }
+        return null;
+    }
+
+    // Lexing functions
     @Override
     Token getToken() throws LexingError {
         lastPos = input.getPosition();
@@ -264,7 +283,7 @@ public class SwiftLexer extends Lexer {
     }
 
     Token getOperatorLiteral() {
-             StringBuilder builder = new StringBuilder();
+        StringBuilder builder = new StringBuilder();
         boolean dotStart = false;
         boolean prefix = false, postfix = false;
 
@@ -303,14 +322,14 @@ public class SwiftLexer extends Lexer {
                 nextSymbol != ';' && nextSymbol != ':' && (nextSymbol != '.' || !prefix);
 
         String operator = builder.toString();
-        if (operator.length() == 1){
-            if (operator == "="){
+        if (operator.length() == 1) {
+            if (operator == "=") {
                 if (prefix != postfix) {
                     return new Token(Token.TokenType.EQUAL, lastPos, operator);
                 }
             }
-            if (operator == "&"){
-                if (prefix == postfix || prefix){
+            if (operator == "&") {
+                if (prefix == postfix || prefix) {
                     return new Token(Token.TokenType.AMPERSAND, lastPos, operator);
                 }
             }
@@ -318,10 +337,5 @@ public class SwiftLexer extends Lexer {
         }
 
         return null;
-    }
-
-    boolean escapable(int character) {
-        return (character == '0' || character == '\\' || character == 't' || character == 'n' || character == 'r'
-                || character == '"' || character == '\'');
     }
 }
