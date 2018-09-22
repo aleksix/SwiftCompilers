@@ -35,30 +35,62 @@ public class SwiftLexer extends Lexer {
     /*
      * Utility functions
      */
+
+    /**
+     * Returns the tokens for an expression inside a given extrapolated string.
+     *
+     * @param interpolatedString token for an extrapolated string we wish to check
+     * @return ArrayList of Token arrays. If the lsit is empty, then either the token is not an interpolated string,
+     */
+    public ArrayList<Token[]> getInterpolatedExpressions(Token interpolatedString) {
+        ArrayList<Token[]> out = new ArrayList<>();
+        if (interpolatedString.type == Token.TokenType.INTERPOLATED_STRING) {
+            for (Pair<Token, Token[]> expression : interpolations) {
+                if (expression.first.equals(interpolatedString))
+                    out.add(expression.second);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Checks if a given character needs to be escaped in a single-line string.
+     *
+     * @param character character to be checked
+     * @return true if the character needs escaping, false otherwise
+     */
     private boolean singleEscapable(int character) {
         return (multilineEscapable(character) || character == '"');
     }
 
+
+    /**
+     * Checks if a given character needs to be escaped in a multi-line string.
+     *
+     * @param character character to be checked
+     * @return true if the character needs escaping, false otherwise
+     */
     private boolean multilineEscapable(int character) {
         return (character == '0' || character == '\\' || character == 't' || character == 'n' || character == 'r'
                 || character == '\'');
     }
 
-    public ArrayList<Token[]> getInterpolatedExpression(Token interpolatedString) {
-        ArrayList<Token[]> out = new ArrayList<>();
-        for (Pair<Token, Token[]> expression : interpolations) {
-            if (expression.first.equals(interpolatedString))
-                out.add(expression.second);
-        }
-        return out;
-    }
-
     // More reliable than remembering to always do these 2 things
+
+    /**
+     * Sets the previous character to the current character, advances the input and reads the symbol into currentSymbol
+     */
     private void advance() {
         prevSymbol = currentSymbol;
         currentSymbol = input.consume();
     }
 
+    /**
+     * Tries to tokenize the contents of an expression inside an interpolated string.
+     * Requires that the lexer starts at the first escaped bracket.
+     *
+     * @param curToken Token with which to associate the resulting tokens.
+     */
     private void parseInterpolation(Token curToken) {
         // Bracket counter, to know when to exit, currently just 1 bracket
         int brackets = 1;
@@ -73,8 +105,7 @@ public class SwiftLexer extends Lexer {
             advance();
             if (currentSymbol == ')')
                 brackets--;
-            else
-                expression.append((char) currentSymbol);
+            expression.append((char) currentSymbol);
         }
 
         expressionLexer = new SwiftLexer(new StringSource(expression.toString()));
@@ -88,6 +119,12 @@ public class SwiftLexer extends Lexer {
         interpolations.add(new Pair<Token, Token[]>(curToken, parsed.toArray(new Token[0])));
     }
 
+    /**
+     * Tries to parse the unicode hexadecimal number and turn it into a unicode symbol.
+     * Requires that the input is place on the first opening bracket.
+     *
+     * @return Unicode symbol denoted by the code.
+     */
     private int parseUnicodeEscape() {
         final String hexSymbols = "0123456789abcdefABCDEF";
         StringBuilder builder = new StringBuilder();
@@ -102,6 +139,12 @@ public class SwiftLexer extends Lexer {
     }
 
     // Yes, I do hat myself for this. No, I don't have a better solution. Thanks, Java!
+
+    /**
+     * Seeks to a given position in the input.
+     *
+     * @param position Position to seek to.
+     */
     private void skipTo(int position) {
         input.reset();
         while (input.getPosition() != position)
@@ -110,6 +153,12 @@ public class SwiftLexer extends Lexer {
 
     /*
      * Lexing functions
+     */
+
+    /**
+     * Returns the next token from the input stream.
+     *
+     * @return the next found token, -1 if EOF
      */
     @Override
     Token getToken() {
@@ -160,6 +209,11 @@ public class SwiftLexer extends Lexer {
         return null;
     }
 
+    /**
+     * Tries to parse a token of type IDENTIFIER.
+     *
+     * @return found token
+     */
     Token getIdentifier() {
         StringBuilder builder = new StringBuilder();
         // Swift allows to use keywords as identifiers if they are surrounded by backticks ('`')
@@ -221,23 +275,23 @@ public class SwiftLexer extends Lexer {
         if (currentSymbol == '"') {
             // Multiline string
             builder.append((char) currentSymbol);
+            // Consume the quote
             advance();
             if (currentSymbol != '"') {
-                // Empty single-line string, actually.
+                // Empty single-line string, not multiline string, actually.
                 return new Token(Token.TokenType.STRING_LITERAL, lastPos, builder.toString());
             }
             multiline = true;
             builder.append((char) currentSymbol);
+            // Consume next quote
             advance();
-            // We need to ignore the first linebreak after the quotes
+            // When we hit a linebreak, we should remove CR from CRLF
             if (currentSymbol == '\r') {
                 advance();
-                advance();
-            } else if (currentSymbol == '\n') {
-                advance();
-            } else {
+            } else if (currentSymbol != '\n') {
                 errors.add("Multiline strings delimiter must be separated from the string by a newline at " +
                         Integer.toString(input.getPosition()));
+                builder.append("\n");
             }
         }
         // First character
@@ -315,8 +369,10 @@ public class SwiftLexer extends Lexer {
                         if ((multiline && !multilineEscapable(currentSymbol))
                                 || (!multiline && !singleEscapable(currentSymbol)))
                             errors.add("Unknown escape sequence at " + Integer.toString(input.getPosition()));
-                        else
+                        else {
+                            builder.append('\\');
                             builder.append((char) currentSymbol);
+                        }
                     }
                 } else {
                     builder.append((char) currentSymbol);
@@ -332,9 +388,33 @@ public class SwiftLexer extends Lexer {
             String last = lines[lines.length - 1];
             String indent = "";
 
+            // Values for checking escaped linefeeds and carriage returns near the ending delimiter
+            int prevCheck = -1;
+            int curCheck = -1;
+            ArrayList<Integer> brokenPositions = new ArrayList<>();
+
+            for (int c = 0; c < last.length(); c++) {
+                prevCheck = curCheck;
+                curCheck = last.charAt(c);
+                if (prevCheck == '\\' && (curCheck == 'n' || curCheck == 'r')) {
+                    errors.add("Escaped linefeeds and carriage returns not allowed near " +
+                            "the ending multiline delimiter at" +
+                            Integer.toString(lastPos + builder.length() - last.length() + c));
+                    brokenPositions.add(lastPos + builder.length() - last.length() + c);
+                }
+            }
+
+            if (brokenPositions.size() > 0) {
+                for (int c = brokenPositions.size() - 1; c >= 0; c--) {
+                    builder.delete(brokenPositions.get(c) - 1, brokenPositions.get(c) + 1);
+                }
+                // Fixed the proble, split the string again
+                lines = builder.toString().split("\n");
+                last = lines[lines.length - 1];
+            }
+
             // Multiline strings MUST begin and end with newlines.
-            if (!last.trim().startsWith("\"\"\"") ||
-                    (last.trim().startsWith("\"\"\"") && last.trim().endsWith("\"\"\""))) {
+            if (!last.trim().startsWith("\"\"\"")) {
                 errors.add("Multiline string end delimiter must be separated by a newline at"
                         + Integer.toString(input.getPosition()));
                 // Try to fix the problem and split the string again
@@ -347,24 +427,29 @@ public class SwiftLexer extends Lexer {
 
             if (indent.length() > 0) {
                 int pos;
-                for (int c = lines.length - 1; c >= 0; c--) {
+                for (int c = lines.length - 1; c > 0; c--) {
                     pos = builder.indexOf(lines[c]);
-                    if (lines[c].startsWith("\"\"\"")) {
-                        lines[c] = lines[c].substring(3);
-                        pos += 3;
-                    }
                     if (lines[c].trim().length() > 0) {
                         if (lines[c].startsWith(indent)) {
                             builder.delete(pos, pos + indent.length());
+                        } else {
+                            errors.add("Multi-line strings need to have consistent indent with the last delimiter at "
+                                    + Integer.toString(pos));
                         }
                     }
                 }
             }
 
-            // A bit hacky, but much simpler. The last linebreak doesn't count too.
-            int lastLineBreak = builder.lastIndexOf("\n");
-            if (lastLineBreak != -1) {
-                builder.delete(lastLineBreak, lastLineBreak + 1);
+            // A bit hacky, but much simpler. This hack is also kinda used by Apple, so no problem there
+            // Remove leading linebreak
+            int foundLineBreak = builder.indexOf("\n");
+            if (foundLineBreak != -1) {
+                builder.delete(foundLineBreak, foundLineBreak + 1);
+            }
+            // Remove trailing linebreak
+            foundLineBreak = builder.lastIndexOf("\n");
+            if (foundLineBreak != -1) {
+                builder.delete(foundLineBreak, foundLineBreak + 1);
             }
         }
         out.type = tokType;

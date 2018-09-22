@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 
 public class Main {
-    public static void main(String[] args){
+    public static void main(String[] args) {
         Lexer lex = new SwiftLexer(new StringSource(
                 "/* My first program in Swift 4 */\r\n" +
                         "// With comments!\r\n" +
@@ -12,7 +12,7 @@ public class Main {
                         "print(15e10)\r\n"
         ));
 
-        Lexer test = new SwiftLexer(new StringSource("\"\"\"Hello\"\"\""));
+        Lexer test = new SwiftLexer(new StringSource("\"\"\"\n Hello\n\\n\\r\\n\\r\"\"\""));
 
         ArrayList<Token> toks = new ArrayList<>();
         Token t = null;

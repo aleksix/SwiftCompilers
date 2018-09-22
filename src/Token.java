@@ -53,4 +53,18 @@ public class Token {
         this.position = position;
         this.type = type;
     }
+
+    @Override
+    public boolean equals(Object other) {
+        if (other == null)
+            return false;
+        if (!Token.class.isAssignableFrom(other.getClass()))
+            return false;
+
+        final Token token = (Token) other;
+
+        if (value.equals(token.value) && position == token.position && type.equals(token.position))
+            return true;
+        return false;
+    }
 }
