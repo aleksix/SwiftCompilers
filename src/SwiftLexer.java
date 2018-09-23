@@ -670,28 +670,35 @@ public class SwiftLexer extends Lexer {
      * @return found type of operator token
      */
 
-    Token getOperatorLiteral() {
+      Token getOperatorLiteral() {
         StringBuilder builder = new StringBuilder();
         char tokStart = 0;
         boolean leftB = true, rightB = true;
 
+        //checks if the operator is left bound
         if (input.getPosition() == 0) leftB = false;
         else if (SymbolClasses.isWhitespace(prevSymbol)) leftB = false;
         else if (prevSymbol == '/' && prevPrevSymbol == '*' && input.getPosition() != 0) leftB = false;
         else leftB = true;
 
-
+        //checks is given symbol is valid start of operator
         if (SymbolClasses.isOperatorHead(currentSymbol)) {
             tokStart = (char) currentSymbol;
             builder.append((char) currentSymbol);
             advance();
         }
 
+
         while (SymbolClasses.isOperatorSymbol(currentSymbol)) {
+            //'!' and '?' are special token and can't be in the middle of an operator.
             if (currentSymbol == '!' || currentSymbol == '?') {
                 break;
+                // '.' cannot appear in the middle of an operator unless the operator
+                // started with a '.'.
             } else if (currentSymbol == '.' && tokStart != '.') {
                 break;
+                // If there is a "//" or "/*" in the middle of an identifier token,
+                // it starts a comment.
             } else if (builder.length() > 2) {
                 if (currentSymbol == '/' || currentSymbol == '*' && prevSymbol == '/') break;
             } else {
@@ -699,9 +706,10 @@ public class SwiftLexer extends Lexer {
                 advance();
             }
         }
-
+        //checks if the operator is right bound
         if (SymbolClasses.isWhitespace(currentSymbol)) rightB = false;
         else if (currentSymbol == '.') rightB = !leftB;
+
         else if (currentSymbol == '/' || currentSymbol == '*') rightB = false;
         else rightB = true;
         String operator = builder.toString();
@@ -747,6 +755,9 @@ public class SwiftLexer extends Lexer {
                 return new Token(Token.TokenType.ERROR, lastPos, operator);
             }
         }
+        // Decide between the binary, prefix, and postfix cases.
+        // It's binary if either both sides are bound or both sides are not bound.
+        // Otherwise, it's postfix if left-bound and prefix if right-bound.
         if (leftB == rightB) return new Token(Token.TokenType.BINARY_OPERATOR, lastPos, operator);
         return leftB ? new Token(Token.TokenType.POSTFIX_OPERATOR, lastPos, operator) : new Token(Token.TokenType.PREFIX_OPERATOR, lastPos, operator);
     }
