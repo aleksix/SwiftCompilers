@@ -159,7 +159,7 @@ public class SwiftLexer extends Lexer {
      * If finds start of multi line comment, seeks the end and skips.
      * Calls getOperatorLiteral function if there is no comment or whitespace.
      *
-     * @return null if comment or whitespace occurs
+     * @return null if comment or whitespace occurs, calls getOperatorLiteral otherwise.
      */
     private Token ignoreCommentsAndWhitespace() {
         while (SymbolClasses.isWhitespace(currentSymbol) || currentSymbol == '/') {
