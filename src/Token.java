@@ -36,6 +36,7 @@ public class Token {
         QUESTION_MARK,
         POSTFIX_QUESTION,
         EXCLAMATION_MARK,
+        PREFIX_DOT,
 
         ERROR
     }

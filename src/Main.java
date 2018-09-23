@@ -12,7 +12,7 @@ public class Main {
                         "print(15e10)\r\n"
         ));
 
-        Lexer test = new SwiftLexer(new StringSource("\"\"\"\n Hello\n\\n\\r\\n\\r\"\"\""));
+        Lexer test = new SwiftLexer(new StringSource("\"Hello world\""));
 
         ArrayList<Token> toks = new ArrayList<>();
         Token t = null;

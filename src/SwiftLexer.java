@@ -83,7 +83,7 @@ public class SwiftLexer extends Lexer {
      * Sets the previous character to the current character, advances the input and reads the symbol into currentSymbol
      */
     private void advance() {
-      prevPrevSymbol = prevSymbol;
+        prevPrevSymbol = prevSymbol;
         prevSymbol = currentSymbol;
         currentSymbol = input.consume();
     }
@@ -193,14 +193,16 @@ public class SwiftLexer extends Lexer {
         }
 
         lastPos = input.getPosition();
-        prevSymbol = currentSymbol;
-        currentSymbol = input.peek();
 
         if (SymbolClasses.isIdentifierHead(currentSymbol) || currentSymbol == '`' || currentSymbol == '$')
             return getIdentifier();
 
+        if (SymbolClasses.isOperatorHead(currentSymbol))
+            return getOperatorLiteral();
+
         if (Character.isDigit(currentSymbol))
             return getNumberLiteral();
+
 
         switch (currentSymbol) {
             case '"':
@@ -261,7 +263,6 @@ public class SwiftLexer extends Lexer {
         return new Token(type, lastPos, builder.toString());
     }
 
-    // TODO : According to Apple, there should be no trailing escaped newlines near the end of the multiline strings
     Token getStringLiteral() {
         StringBuilder builder = new StringBuilder();
         builder.append((char) currentSymbol);
@@ -631,7 +632,7 @@ public class SwiftLexer extends Lexer {
         return new Token(Token.TokenType.POUND, lastPos, "#");
     }
 
-       Token getOperatorLiteral() {
+    Token getOperatorLiteral() {
         StringBuilder builder = new StringBuilder();
         char tokStart = 0;
         boolean leftB = true, rightB = true;
@@ -660,10 +661,10 @@ public class SwiftLexer extends Lexer {
                 advance();
             }
         }
-        int nextSymbol = input.consume();
-        if (SymbolClasses.isWhitespace(nextSymbol)) rightB = false;
-        else if (nextSymbol == '.') rightB = !leftB;
-        else if (nextSymbol == '/' || nextSymbol == '*') rightB = false;
+
+        if (SymbolClasses.isWhitespace(currentSymbol)) rightB = false;
+        else if (currentSymbol == '.') rightB = !leftB;
+        else if (currentSymbol == '/' || currentSymbol == '*') rightB = false;
         else rightB = true;
         String operator = builder.toString();
 
