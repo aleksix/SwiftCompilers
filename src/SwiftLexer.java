@@ -251,39 +251,56 @@ public class SwiftLexer extends Lexer {
         boolean backtick = (currentSymbol == '`');
         Token.TokenType type = Token.TokenType.IDENTIFIER;
 
-        if (backtick) {
+        if (currentSymbol == '$') {
+            // Implicit parameter naming
             builder.append((char) currentSymbol);
             advance();
-        }
-        while (SymbolClasses.isIdentifierSymbol(currentSymbol)) {
-            builder.append((char) currentSymbol);
-            advance();
-        }
-
-        if (backtick) {
-            if (currentSymbol == '`' && builder.length() > 1) {
+            if (!Character.isDigit(currentSymbol)) {
+                errors.add("Implicit identifiers need to have at least 1 digit in them");
+                builder.append('0');
+            }
+            while (Character.isDigit(currentSymbol)) {
                 builder.append((char) currentSymbol);
                 advance();
-            } else {
-                if (builder.length() == 1)
-                    errors.add("Empty backtick identifier at " + Integer.toString(input.getPosition()));
-                if (currentSymbol != '`') {
-                    errors.add("No backtick at the end of an identifier starting with backtick at"
-                            + Integer.toString(input.getPosition()));
-                    // Attempt to fix the issue
-                    builder.append('`');
-                }
             }
         } else {
-            String contents = builder.toString();
-            if (SwiftSpecials.isKeyword(contents))
-                type = Token.TokenType.KEYWORD;
-            else if (SwiftSpecials.isContextSensitive(contents))
-                type = Token.TokenType.CONTEXT_KEYWORD;
-            else if (contents.equals("true") || contents.equals("false"))
-                type = Token.TokenType.BOOLEAN_LITERAL;
-            else if (contents.equals("nil"))
-                type = Token.TokenType.NIL_LITERAL;
+            if (backtick) {
+                builder.append((char) currentSymbol);
+                advance();
+            }
+            while (SymbolClasses.isIdentifierSymbol(currentSymbol)) {
+                builder.append((char) currentSymbol);
+                advance();
+            }
+            // Single backtick is not an identifier
+            if (builder.length() == 1 && backtick)
+                return new Token(Token.TokenType.BACKTICK, lastPos, builder.toString());
+
+            if (backtick) {
+                if (currentSymbol == '`' && builder.length() > 1) {
+                    builder.append((char) currentSymbol);
+                    advance();
+                } else {
+                    if (builder.length() == 1)
+                        errors.add("Empty backtick identifier at " + Integer.toString(input.getPosition()));
+                    if (currentSymbol != '`') {
+                        errors.add("No backtick at the end of an identifier starting with backtick at"
+                                + Integer.toString(input.getPosition()));
+                        // Attempt to fix the issue
+                        builder.append('`');
+                    }
+                }
+            } else {
+                String contents = builder.toString();
+                if (SwiftSpecials.isKeyword(contents))
+                    type = Token.TokenType.KEYWORD;
+                else if (SwiftSpecials.isContextSensitive(contents))
+                    type = Token.TokenType.CONTEXT_KEYWORD;
+                else if (contents.equals("true") || contents.equals("false"))
+                    type = Token.TokenType.BOOLEAN_LITERAL;
+                else if (contents.equals("nil"))
+                    type = Token.TokenType.NIL_LITERAL;
+            }
         }
 
         return new Token(type, lastPos, builder.toString());

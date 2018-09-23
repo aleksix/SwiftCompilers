@@ -55,6 +55,16 @@ class SwiftLexerTest {
         assertEquals(lex.getToken(), new Token(Token.TokenType.NIL_LITERAL, 0, "nil"));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
 
+        // Implicit identifiers
+        lex = new SwiftLexer(new StringSource("$3"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.IDENTIFIER, 0, "$3"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        // Backticks are also handled by the identifier function
+        lex = new SwiftLexer(new StringSource("`"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.BACKTICK, 0, "`"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
         // All identifiers are case-sensitive
         // Standard identifier
         lex = new SwiftLexer(new StringSource("Hello"));
@@ -85,6 +95,11 @@ class SwiftLexerTest {
         // Expected error - no backtick at the end
         lex = new SwiftLexer(new StringSource("`hello"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.IDENTIFIER, 0, "`hello`"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
+
+        // Expected error - implicit identifiers must have al least 1 digit in them
+        lex = new SwiftLexer(new StringSource("$"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.IDENTIFIER, 0, "$0"));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
     }
 
@@ -247,8 +262,8 @@ class SwiftLexerTest {
     }
 
     @org.junit.jupiter.api.Test
-     void getOperatorLiteral() {
-      Lexer lex = new SwiftLexer(new StringSource("a=b"));
+    void getOperatorLiteral() {
+        Lexer lex = new SwiftLexer(new StringSource("a=b"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.IDENTIFIER, 0, "a"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.EQUAL, 1, "="));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
@@ -281,7 +296,7 @@ class SwiftLexerTest {
         assertEquals(lex.getToken(), new Token(Token.TokenType.BINARY_OPERATOR, 2, "+++"));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
 
-     
+
         lex = new SwiftLexer(new StringSource("a+++ b"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.IDENTIFIER, 0, "a"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.POSTFIX_OPERATOR, 1, "+++"));
@@ -303,7 +318,6 @@ class SwiftLexerTest {
         lex = new SwiftLexer(new StringSource("}"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.CURLY_R, 0, "}"));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
-
 
 
         lex = new SwiftLexer(new StringSource("& "));
