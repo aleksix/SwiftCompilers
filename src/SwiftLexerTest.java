@@ -161,17 +161,96 @@ class SwiftLexerTest {
 
     @org.junit.jupiter.api.Test
     void getNumberLiteral() {
+        // Integer literal
+        Lexer lex = new SwiftLexer(new StringSource("5"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.INT_LITERAL, 0, "5"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        // Octal integer literal
+        lex = new SwiftLexer(new StringSource("0o57"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.INT_LITERAL, 0, "0o57"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        // Binary integer literal
+        lex = new SwiftLexer(new StringSource("0b001110"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.INT_LITERAL, 0, "0b001110"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        // Hex integer literal
+        lex = new SwiftLexer(new StringSource("0x58Ac"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.INT_LITERAL, 0, "0x58Ac"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        // Floating-point literal with dot
+        lex = new SwiftLexer(new StringSource("15.35"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.FLOAT_LITERAL, 0, "15.35"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        // Floating-point literal with exponent
+        lex = new SwiftLexer(new StringSource("15e35"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.FLOAT_LITERAL, 0, "15e35"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        // Floating-point literal with dot and exponent
+        lex = new SwiftLexer(new StringSource("15.3e5"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.FLOAT_LITERAL, 0, "15.3e5"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        // Hex floating-point literal
+        lex = new SwiftLexer(new StringSource("0x8Ac6p5"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.FLOAT_LITERAL, 0, "0x8Ac6p5"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        // Expected error - incorrect exponent
+        lex = new SwiftLexer(new StringSource("15e3e5"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.FLOAT_LITERAL, 0, "15e3"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.IDENTIFIER, 4, "e5"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
+
+        // Expected error - incorrect hexadecimal exponent
+        lex = new SwiftLexer(new StringSource("0x8Ac6p5p16"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.FLOAT_LITERAL, 0, "0x8Ac6p5"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.IDENTIFIER, 8, "p16"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
+
+        // Expected error - non-decimal numbers must start with 0
+        lex = new SwiftLexer(new StringSource("5b1101"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.INT_LITERAL, 0, "0b1101"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
+
+        // Expected error - incorrect digit after the prefix
+        // Also unexpected output
+        lex = new SwiftLexer(new StringSource("0b5101"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.INT_LITERAL, 0, "0b0"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.INT_LITERAL, 2, "5101"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
+
+        // No error, but unexpected output
+        lex = new SwiftLexer(new StringSource("0b1501"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.INT_LITERAL, 0, "0b1"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.INT_LITERAL, 3, "501"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
     }
 
     @org.junit.jupiter.api.Test
     void getExpressionLiteral() {
+        // Expression literal
+        Lexer lex = new SwiftLexer(new StringSource("#line"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.EXPRESSION_LITERAL, 0, "#line"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        // Expected error - incorrect expression literal
+        lex = new SwiftLexer(new StringSource("#wrong"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.POUND, 0, "#"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.IDENTIFIER, 1, "wrong"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
     }
 
     @org.junit.jupiter.api.Test
     void getOperatorLiteral() {
 
         Lexer lex = new SwiftLexer(new StringSource("a=b"));
-        assertEquals(lex.getToken(), new Token(Token.TokenType.EQUAL, 0, "="));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.EQUAL, 1, "="));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
 
         lex = new SwiftLexer(new StringSource("&myVar"));
@@ -254,7 +333,7 @@ class SwiftLexerTest {
         lex = new SwiftLexer(new StringSource("lock->cmd"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.ARROW, 4, "->"));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
-     
+
         lex = new SwiftLexer(new StringSource("x -= 2"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.BINARY_OPERATOR, 2, "-="));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
