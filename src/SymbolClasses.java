@@ -201,6 +201,17 @@ public class SymbolClasses {
             case '^':
             case '~':
             case '?':
+            case '.':
+            case '@':
+            case '{':
+            case '}':
+            case '(':
+            case ')':
+            case '[':
+            case ']':
+            case ',':
+            case ':':
+            case ';':
             case 0x3030:
             case 0x2016:
             case 0x2017:

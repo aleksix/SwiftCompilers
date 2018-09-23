@@ -727,7 +727,7 @@ public class SwiftLexer extends Lexer {
                 return new Token(Token.TokenType.EQUAL, lastPos, operator);
             }
             if (operator.equals("&")) {
-                if (leftB == rightB || leftB) {
+                if (!leftB && rightB) {
                     return new Token(Token.TokenType.PREFIX_AMPERSAND, lastPos, operator);
                 }
             }
