@@ -298,8 +298,6 @@ public class SwiftLexer extends Lexer {
         StringBuilder builder = new StringBuilder();
         builder.append((char) currentSymbol);
         advance();
-        // Yes, prevPrev. Can't think of a more elegant way for now.
-        int prevPrevSymbol = -1;
         Token.TokenType tokType = Token.TokenType.STRING_LITERAL;
         // Needed for indexing into the interpolated string array. Not sure if that's a good idea
         Token out = new Token(tokType, lastPos);
@@ -334,7 +332,6 @@ public class SwiftLexer extends Lexer {
         while ((multiline && (prevPrevSymbol != '"' || prevSymbol != '"'))
                 || (!multiline && prevSymbol == '\\') || currentSymbol != '"') {
 
-            prevPrevSymbol = prevSymbol;
             advance();
 
             // EOF before the string is closed
@@ -348,7 +345,7 @@ public class SwiftLexer extends Lexer {
                     if (prevSymbol != '"')
                         builder.append('"');
                 }
-                currentSymbol = '"';
+                prevPrevSymbol = '"';
                 prevSymbol = '"';
                 currentSymbol = '"';
             } else if (!multiline && (SymbolClasses.isLinebreak(currentSymbol)))
@@ -391,8 +388,6 @@ public class SwiftLexer extends Lexer {
 
                         if (unicodeValue == -1) {
                             errors.add("Incorrect unicode pattern at " + Integer.toString(input.getPosition()));
-                            // Kinda bad, but at least helps a bit
-                            unicodeValue = 32;
                         }
                         if (currentSymbol != '}')
                             errors.add("} expected at the end of \\u at " + Integer.toString(input.getPosition()));
@@ -400,7 +395,9 @@ public class SwiftLexer extends Lexer {
                             advance();
                         }
 
-                        builder.append((char) unicodeValue);
+                        if (unicodeValue != -1)
+                            builder.append((char) unicodeValue);
+                        builder.append((char) currentSymbol);
                     } else {
                         // Check if the sequence requires escaping
                         if ((multiline && !multilineEscapable(currentSymbol))

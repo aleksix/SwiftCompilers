@@ -9,10 +9,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class SwiftLexerTest {
 
     @org.junit.jupiter.api.Test
-    void getInterpolatedExpressions() {
-    }
-
-    @org.junit.jupiter.api.Test
     void getToken() {
         // Check general execution
         Lexer lex = new SwiftLexer(new StringSource(""));
@@ -115,6 +111,52 @@ class SwiftLexerTest {
         assertEquals(interpolation.get(0)[1], new Token(Token.TokenType.BINARY_OPERATOR, 8, "+"));
         assertEquals(interpolation.get(0)[2], new Token(Token.TokenType.INT_LITERAL, 9, "2"));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        // Expected error - string not ended at EOF
+        lex = new SwiftLexer(new StringSource("\"hello"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.STRING_LITERAL, 0, "\"hello\""));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
+
+        // Expected error - newlines forbidden is single-line strings
+        lex = new SwiftLexer(new StringSource("\"hello\n\""));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.STRING_LITERAL, 0, "\"hello\""));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
+
+        // Expected error - string not ended at EOF
+        lex = new SwiftLexer(new StringSource("\"\"\"\nhello\n"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.STRING_LITERAL, 0, "\"\"\"hello\"\"\""));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
+
+        // Expected error - first delimiter must be separated by newline
+        lex = new SwiftLexer(new StringSource("\"\"\"hello\n\"\"\""));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.STRING_LITERAL, 0, "\"\"\"hello\"\"\""));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
+
+        // Expected error - last delimiter must be separated by newline
+        lex = new SwiftLexer(new StringSource("\"\"\"\nhello\"\"\""));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.STRING_LITERAL, 0, "\"\"\"hello\"\"\""));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
+
+        // Expected error - first delimiter must be separated by newline
+        lex = new SwiftLexer(new StringSource("\"\"\"\nhello\"\"\""));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.STRING_LITERAL, 0, "\"\"\"hello\"\"\""));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
+
+        // Expected error - { expected after \\u
+        lex = new SwiftLexer(new StringSource("\"hello\\u0021}\""));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.STRING_LITERAL, 0, "\"hello!\""));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
+
+        // Expected error - } expected after \\u sequence
+        // Expected error - incorrect Unicode sequence
+        lex = new SwiftLexer(new StringSource("\"hello\\u{0021\""));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.STRING_LITERAL, 0, "\"hello\""));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 2);
+
+        // Expected error - unknown escape sequence
+        lex = new SwiftLexer(new StringSource("\"hello\\x\""));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.STRING_LITERAL, 0, "\"hello\""));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
     }
 
     @org.junit.jupiter.api.Test
@@ -126,9 +168,9 @@ class SwiftLexerTest {
     }
 
     @org.junit.jupiter.api.Test
-      void getOperatorLiteral() {
-     
-      Lexer lex = new SwiftLexer(new StringSource("a=b"));
+    void getOperatorLiteral() {
+
+        Lexer lex = new SwiftLexer(new StringSource("a=b"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.EQUAL, 1, "="));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
 
@@ -159,7 +201,7 @@ class SwiftLexerTest {
         lex = new SwiftLexer(new StringSource("a+++.b"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.POSTFIX_OPERATOR, 1, "+++."));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
-     
+
         lex = new SwiftLexer(new StringSource("a+++ b"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.POSTFIX_OPERATOR, 1, "+++"));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
