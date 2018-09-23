@@ -6,7 +6,7 @@ The application is guaranteed to work with Swift4.2 version
 
 ## Description
 The application will read source code from "in.txt" file and try to evaluate them, writing the results to "out.txt".
-The expected "in.txt" is a file with source code, "out.txt" contains all found tokens or list with errors.
+The expected "in.txt" is a file with source code, "out.txt" contains all found tokens or list of errors.
 
 ## Getting Started
 
