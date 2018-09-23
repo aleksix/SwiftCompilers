@@ -159,6 +159,10 @@ class SwiftLexerTest {
         lex = new SwiftLexer(new StringSource("a+++.b"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.POSTFIX_OPERATOR, 0, "+++."));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+     
+        lex = new SwiftLexer(new StringSource("a+++ b"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.POSTFIX_OPERATOR, 0, "+++"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
 
         lex = new SwiftLexer(new StringSource("a +++b"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.PREFIX_OPERATOR, 0, "+++"));
