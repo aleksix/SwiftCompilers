@@ -555,13 +555,14 @@ public class SwiftLexer extends Lexer {
             prevSymbol = currentSymbol;
             currentSymbol = input.peek();
             if (checkSymbol)
-                if (optionalPostfix.indexOf(currentSymbol) == -1)
+                if (optionalPostfix.indexOf(currentSymbol) == -1) {
+                    checkSymbol = false;
                     if (curSymbols.indexOf(currentSymbol) == -1) {
                         errors.add("Incorrect digit at " + Integer.toString(input.getPosition()));
+                        builder.append('0');
                         continue;
-                    } else
-                        checkSymbol = false;
-                else
+                    }
+                } else
                     optionalPostfix = "";
 
             if (curSymbols.indexOf(currentSymbol) != -1 || currentSymbol == '_') {
@@ -577,6 +578,7 @@ public class SwiftLexer extends Lexer {
                     numType = NumType.FLOAT_COMBO;
                 else {
                     errors.add("Incorrect decimal exponent symbol at " + Integer.toString(input.getPosition()));
+                    done = true;
                     continue;
                 }
                 builder.append((char) currentSymbol);
@@ -587,8 +589,11 @@ public class SwiftLexer extends Lexer {
                 // Check if we are dealing with a hex float now
                 if (numType == NumType.HEX_INTEGER)
                     numType = NumType.HEX_FLOAT;
-                else
+                else {
                     errors.add("Incorrect hexadecimal exponent symbol at" + Integer.toString(input.getPosition()));
+                    done = true;
+                    continue;
+                }
                 builder.append((char) currentSymbol);
                 advance();
                 optionalPostfix = exponentPostfix;
@@ -669,6 +674,7 @@ public class SwiftLexer extends Lexer {
             return new Token(Token.TokenType.EXPRESSION_LITERAL, lastPos, builder.toString());
         }
         skipTo(lastPos + 1);
+        errors.add("Incorrect expression literal at " + Integer.toString(lastPos));
         // This method is somewhat bad, but that's what Apple uses in it's lexer, so it can be important
         return new Token(Token.TokenType.POUND, lastPos, "#");
     }
@@ -744,7 +750,7 @@ public class SwiftLexer extends Lexer {
             if (operator.equals(")")) return new Token(Token.TokenType.BRACKET_R, lastPos, operator);
             if (operator.equals("&")) return new Token(Token.TokenType.AMPERSAND, lastPos, operator);
             if (operator.equals("`")) return new Token(Token.TokenType.BACKTICK, lastPos, operator);
-          
+
             if (operator.equals(",")) return new Token(Token.TokenType.COMMA, lastPos, operator);
             if (operator.equals(";")) return new Token(Token.TokenType.SEMICOLON, lastPos, operator);
             if (operator.equals(":")) return new Token(Token.TokenType.COLON, lastPos, operator);
