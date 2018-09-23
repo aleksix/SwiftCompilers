@@ -5,12 +5,8 @@ Specification for each token is provided in description.txt file
 The application is guaranteed to work with Swift4.2 version 
 
 ## Description
-на вход сорс код исходный файл с исх кодом выдается все токены разделенные чз запятую или список ошибок
 The application will read source code from "in.txt" file and try to evaluate them, writing the results to "out.txt".
-The expected "in.txt" is a file with source code, "out.txt" contains all founded tokens or list with errors.
-
-The application supports bracketed expressions and the following operators: "+", "-", "*", ">", "<", "="
-Comparison operators produce numerical representations of boolean values, 1 for "True" and 0 for "False"
+The expected "in.txt" is a file with source code, "out.txt" contains all found tokens or list with errors.
 
 ## Getting Started
 
