@@ -20,6 +20,7 @@ public class SwiftLexer extends Lexer {
     private int lastPos;
     private int currentSymbol;
     private int prevSymbol;
+    private int prevPrevSymbol;
     private ArrayList<Pair<Token, Token[]>> interpolations;
     private ArrayList<String> errors;
 
@@ -28,6 +29,7 @@ public class SwiftLexer extends Lexer {
         currentSymbol = -1;
         lastPos = -1;
         prevSymbol = -1;
+        prevPrevSymbol = -1;
         interpolations = new ArrayList<>();
         errors = new ArrayList<>();
     }
@@ -81,6 +83,7 @@ public class SwiftLexer extends Lexer {
      * Sets the previous character to the current character, advances the input and reads the symbol into currentSymbol
      */
     private void advance() {
+      prevPrevSymbol = prevSymbol;
         prevSymbol = currentSymbol;
         currentSymbol = input.consume();
     }
@@ -628,60 +631,82 @@ public class SwiftLexer extends Lexer {
         return new Token(Token.TokenType.POUND, lastPos, "#");
     }
 
-    Token getOperatorLiteral() {
+       Token getOperatorLiteral() {
         StringBuilder builder = new StringBuilder();
-        boolean dotStart = false;
-        boolean prefix = false, postfix = false;
+        char tokStart = 0;
+        boolean leftB = true, rightB = true;
 
-        prefix = prevSymbol != ' ' && prevSymbol != '\r' &&
-                prevSymbol != '\n' && prevSymbol != '\t' &&
-                prevSymbol != '(' && prevSymbol != '[' &&
-                prevSymbol != '{' && prevSymbol != ',' &&
-                prevSymbol != ';' && prevSymbol != ':' &&
-                prevSymbol != '\0';
+        if (input.getPosition() == 0) leftB = false;
+        else if (SymbolClasses.isWhitespace(prevSymbol)) leftB = false;
+        else if (prevSymbol == '/' && prevPrevSymbol == '*' && input.getPosition() != 0) leftB = false;
+        else leftB = true;
 
 
         if (SymbolClasses.isOperatorHead(currentSymbol)) {
-            if (currentSymbol == '.') {
-                dotStart = true;
-            }
+            tokStart = (char) currentSymbol;
             builder.append((char) currentSymbol);
-            currentSymbol = input.consume();
+            advance();
         }
+
         while (SymbolClasses.isOperatorSymbol(currentSymbol)) {
             if (currentSymbol == '!' || currentSymbol == '?') {
                 break;
-            } else if (currentSymbol == '.' && !dotStart) {
+            } else if (currentSymbol == '.' && tokStart != '.') {
                 break;
             } else if (builder.length() > 2) {
                 if (currentSymbol == '/' || currentSymbol == '*' && prevSymbol == '/') break;
             } else {
                 builder.append((char) currentSymbol);
-                currentSymbol = input.consume();
+                advance();
             }
         }
         int nextSymbol = input.consume();
-        postfix = nextSymbol != ' ' && nextSymbol != '\r' &&
-                nextSymbol != '\n' && nextSymbol != '\t' &&
-                nextSymbol != ')' && nextSymbol != ']' &&
-                nextSymbol != '}' && nextSymbol != ',' &&
-                nextSymbol != ';' && nextSymbol != ':' && (nextSymbol != '.' || !prefix);
-
+        if (SymbolClasses.isWhitespace(nextSymbol)) rightB = false;
+        else if (nextSymbol == '.') rightB = !leftB;
+        else if (nextSymbol == '/' || nextSymbol == '*') rightB = false;
+        else rightB = true;
         String operator = builder.toString();
+
         if (operator.length() == 1) {
-            if (operator == "=") {
-                if (prefix != postfix) {
-                    return new Token(Token.TokenType.EQUAL, lastPos, operator);
+            if (operator.equals("=")) {
+                return new Token(Token.TokenType.EQUAL, lastPos, operator);
+            }
+            if (operator.equals("&")) {
+                if (leftB == rightB || leftB) {
+                    return new Token(Token.TokenType.PREFIX_AMPERSAND, lastPos, operator);
                 }
             }
-            if (operator == "&") {
-                if (prefix == postfix || prefix) {
-                    return new Token(Token.TokenType.AMPERSAND, lastPos, operator);
-                }
+            if (operator.equals(".")) {
+                if (leftB == rightB) return new Token(Token.TokenType.DOT, lastPos, operator);
+                if (rightB) return new Token(Token.TokenType.PREFIX_DOT, lastPos, operator);
+
+            }
+            if (operator.equals("?")) {
+                if (leftB) return new Token(Token.TokenType.POSTFIX_QUESTION, lastPos, operator);
+                return new Token(Token.TokenType.QUESTION_MARK, lastPos, operator);
             }
 
+            if (operator.equals("@")) return new Token(Token.TokenType.AT, lastPos, operator);
+            if (operator.equals("{")) return new Token(Token.TokenType.CURLY_L, lastPos, operator);
+            if (operator.equals("[")) return new Token(Token.TokenType.SQUARE_L, lastPos, operator);
+            if (operator.equals("(")) return new Token(Token.TokenType.BRACKET_L, lastPos, operator);
+            if (operator.equals("}")) return new Token(Token.TokenType.CURLY_R, lastPos, operator);
+            if (operator.equals("]")) return new Token(Token.TokenType.SQUARE_R, lastPos, operator);
+            if (operator.equals(")")) return new Token(Token.TokenType.BRACKET_R, lastPos, operator);
+
+            if (operator.equals(",")) return new Token(Token.TokenType.COMMA, lastPos, operator);
+            if (operator.equals(";")) return new Token(Token.TokenType.SEMICOLON, lastPos, operator);
+            if (operator.equals(":")) return new Token(Token.TokenType.COLON, lastPos, operator);
+            if (operator.equals("!")) {
+                if (leftB) return new Token(Token.TokenType.EXCLAMATION_MARK, lastPos, operator);
+            }
+
+        } else if (operator.length() == 2) {
+            if (operator.equals("->")) return new Token(Token.TokenType.ARROW, lastPos, operator);
+            if (operator.equals("*/")) {
+            }
         }
-
-        return null;
+        if (leftB == rightB) return new Token(Token.TokenType.BINARY_OPERATOR, lastPos, operator);
+        return leftB ? new Token(Token.TokenType.POSTFIX_OPERATOR, lastPos, operator) : new Token(Token.TokenType.PREFIX_OPERATOR, lastPos, operator);
     }
 }
