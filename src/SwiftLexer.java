@@ -154,21 +154,7 @@ public class SwiftLexer extends Lexer {
             input.consume();
     }
 
-    /*
-     * Lexing functions
-     */
-
-    /**
-     * Returns the next token from the input stream.
-     *
-     * @return the next found token, -1 if EOF
-     */
-    @Override
-    Token getToken() {
-        lastPos = input.getPosition();
-        prevSymbol = currentSymbol;
-        currentSymbol = input.peek();
-
+    private Token ignoreCommentsAndWhitespace() {
         while (SymbolClasses.isWhitespace(currentSymbol) || currentSymbol == '/') {
             if (currentSymbol == '/') {
                 advance();
@@ -191,6 +177,28 @@ public class SwiftLexer extends Lexer {
                 }
             }
         }
+        return null;
+    }
+
+    /*
+     * Lexing functions
+     */
+
+    /**
+     * Returns the next token from the input stream.
+     *
+     * @return the next found token, -1 if EOF
+     */
+    @Override
+    Token getToken() {
+        lastPos = input.getPosition();
+        prevSymbol = currentSymbol;
+        currentSymbol = input.peek();
+
+        Token potentialOp = ignoreCommentsAndWhitespace();
+
+        if (potentialOp != null)
+            return potentialOp;
 
         lastPos = input.getPosition();
 
