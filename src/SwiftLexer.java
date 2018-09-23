@@ -272,17 +272,16 @@ public class SwiftLexer extends Lexer {
                 builder.append((char) currentSymbol);
                 advance();
             }
-            // Single backtick is not an identifier
-            if (builder.length() == 1 && backtick)
-                return new Token(Token.TokenType.BACKTICK, lastPos, builder.toString());
+
 
             if (backtick) {
+                // Single backtick is not an identifier
+                if (builder.length() == 1)
+                    return new Token(Token.TokenType.BACKTICK, lastPos, builder.toString());
                 if (currentSymbol == '`' && builder.length() > 1) {
                     builder.append((char) currentSymbol);
                     advance();
                 } else {
-                    if (builder.length() == 1)
-                        errors.add("Empty backtick identifier at " + Integer.toString(input.getPosition()));
                     if (currentSymbol != '`') {
                         errors.add("No backtick at the end of an identifier starting with backtick at"
                                 + Integer.toString(input.getPosition()));
@@ -716,14 +715,14 @@ public class SwiftLexer extends Lexer {
 
         if (SymbolClasses.isOperatorHead(currentSymbol)) {
             tokStart = (char) currentSymbol;
-          
+
             if (tokStart == '{') return new Token(Token.TokenType.CURLY_L, lastPos, Character.toString(tokStart));
-            if (tokStart == '[')  return new Token(Token.TokenType.SQUARE_L, lastPos,Character.toString(tokStart));
-            if (tokStart == '(')  return new Token(Token.TokenType.BRACKET_L, lastPos, Character.toString(tokStart));
-            if (tokStart == '}')  return new Token(Token.TokenType.CURLY_R, lastPos, Character.toString(tokStart));
-            if (tokStart == ']')  return new Token(Token.TokenType.SQUARE_R, lastPos, Character.toString(tokStart));
-            if (tokStart == ')')  return new Token(Token.TokenType.BRACKET_R, lastPos, Character.toString(tokStart));
-           
+            if (tokStart == '[') return new Token(Token.TokenType.SQUARE_L, lastPos, Character.toString(tokStart));
+            if (tokStart == '(') return new Token(Token.TokenType.BRACKET_L, lastPos, Character.toString(tokStart));
+            if (tokStart == '}') return new Token(Token.TokenType.CURLY_R, lastPos, Character.toString(tokStart));
+            if (tokStart == ']') return new Token(Token.TokenType.SQUARE_R, lastPos, Character.toString(tokStart));
+            if (tokStart == ')') return new Token(Token.TokenType.BRACKET_R, lastPos, Character.toString(tokStart));
+
             builder.append((char) currentSymbol);
             advance();
         }
