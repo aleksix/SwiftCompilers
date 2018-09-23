@@ -171,7 +171,7 @@ class SwiftLexerTest {
     void getOperatorLiteral() {
 
         Lexer lex = new SwiftLexer(new StringSource("a=b"));
-        assertEquals(lex.getToken(), new Token(Token.TokenType.EQUAL, 1, "="));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.EQUAL, 0, "="));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
 
         lex = new SwiftLexer(new StringSource("&myVar"));
