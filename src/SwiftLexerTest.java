@@ -169,7 +169,6 @@ class SwiftLexerTest {
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
 
         lex = new SwiftLexer(new StringSource("*/"));
-        assertEquals(lex.getToken(), new Token(Token.TokenType.POSTFIX_OPERATOR, 0, "*/"));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
     }
 }
