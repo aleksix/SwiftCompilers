@@ -93,10 +93,13 @@ public class SwiftLexer extends Lexer {
      * Requires that the lexer starts at the first escaped bracket.
      *
      * @param curToken Token with which to associate the resulting tokens.
+     * @return the interpolated expression
      */
-    private void parseInterpolation(Token curToken) {
+    private String parseInterpolation(Token curToken) {
         // Bracket counter, to know when to exit, currently just 1 bracket
         int brackets = 1;
+        // Start of the expression
+        int start = input.getPosition();
         // Expression buffer
         StringBuilder expression = new StringBuilder();
         // Parsed tokens
@@ -115,11 +118,15 @@ public class SwiftLexer extends Lexer {
 
         do {
             token = expressionLexer.getToken();
-            if (token != null)
+            if (token != null) {
+                token.position += start;
                 parsed.add(token);
+            }
         } while (token != null);
 
-        interpolations.add(new Pair<Token, Token[]>(curToken, parsed.toArray(new Token[0])));
+        interpolations.add(new Pair<>(curToken, parsed.toArray(new Token[0])));
+
+        return expression.toString();
     }
 
     /**
@@ -187,6 +194,10 @@ public class SwiftLexer extends Lexer {
         return null;
     }
 
+    public ArrayList<String> getErrors() {
+        return errors;
+    }
+
     /*
      * Lexing functions
      */
@@ -197,7 +208,7 @@ public class SwiftLexer extends Lexer {
      * @return the next found token, -1 if EOF
      */
     @Override
-    Token getToken() {
+    public Token getToken() {
         lastPos = input.getPosition();
         prevSymbol = currentSymbol;
         currentSymbol = input.peek();
@@ -234,7 +245,7 @@ public class SwiftLexer extends Lexer {
      *
      * @return found token
      */
-    Token getIdentifier() {
+    private Token getIdentifier() {
         StringBuilder builder = new StringBuilder();
         // Swift allows to use keywords as identifiers if they are surrounded by backticks ('`')
         boolean backtick = (currentSymbol == '`');
@@ -283,7 +294,7 @@ public class SwiftLexer extends Lexer {
      *
      * @return found token
      */
-    Token getStringLiteral() {
+    private Token getStringLiteral() {
         StringBuilder builder = new StringBuilder();
         builder.append((char) currentSymbol);
         advance();
@@ -363,7 +374,9 @@ public class SwiftLexer extends Lexer {
                     } else if (currentSymbol == '(') {
                         // Interpolated string. Buffer the expression and lex it.
                         tokType = Token.TokenType.INTERPOLATED_STRING;
-                        parseInterpolation(out);
+                        builder.append((char) prevSymbol);
+                        builder.append((char) currentSymbol);
+                        builder.append(parseInterpolation(out));
                     } else if (currentSymbol == 'u') {
                         // Unicode value. Makes no sense to leave it as-is, so we parse and add it.
                         int unicodeValue = -1;
@@ -487,7 +500,7 @@ public class SwiftLexer extends Lexer {
      *
      * @return found token
      */
-    Token getNumberLiteral() {
+    private Token getNumberLiteral() {
         final String intSymbols = "0123456789";
         final String hexSymbols = "0123456789abcdefABCDEF";
         final String octSymbols = "01234567";
@@ -642,7 +655,7 @@ public class SwiftLexer extends Lexer {
      *
      * @return found token
      */
-    Token getExpressionLiteral() {
+    private Token getExpressionLiteral() {
         StringBuilder builder = new StringBuilder();
         builder.append((char) currentSymbol);
         // Consume the leading pound
@@ -670,7 +683,7 @@ public class SwiftLexer extends Lexer {
      * @return found type of operator token
      */
 
-    Token getOperatorLiteral() {
+    private Token getOperatorLiteral() {
         StringBuilder builder = new StringBuilder();
         char tokStart = 0;
         boolean leftB = true, rightB = true;

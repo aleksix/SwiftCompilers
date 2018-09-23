@@ -12,12 +12,13 @@ public class Main {
                         "print(15e10)\r\n"
         ));
 
-        Lexer test = new SwiftLexer(new StringSource("\"Hello world\""));
+        Lexer test = new SwiftLexer(new StringSource("\"hello\\(3+2)\""));
 
         ArrayList<Token> toks = new ArrayList<>();
         Token t = null;
         do {
             t = test.getToken();
+            ArrayList<Token[]> x = ((SwiftLexer) test).getInterpolatedExpressions(t);
             if (t != null)
                 toks.add(t);
         } while (t != null);

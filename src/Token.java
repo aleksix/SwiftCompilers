@@ -66,7 +66,7 @@ public class Token {
 
         final Token token = (Token) other;
 
-        if (value.equals(token.value) && position == token.position && type.equals(token.position))
+        if (value.equals(token.value) && position == token.position && type.equals(token.type))
             return true;
         return false;
     }
