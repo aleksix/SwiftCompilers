@@ -127,5 +127,45 @@ class SwiftLexerTest {
 
     @org.junit.jupiter.api.Test
     void getOperatorLiteral() {
+     
+      Lexer lex = new SwiftLexer(new StringSource("a=b"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.EQUAL, 0, "="));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("&myVar"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.PREFIX_AMPERSAND, 0, "&"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("f1.f2"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.DOT, 0, "."));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource(".f"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.PREFIX_DOT, 0, "."));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("?"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.QUESTION_MARK, 0, "?"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("U?"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.POSTFIX_QUESTION, 0, "?"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("a +++ b"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.BINARY_OPERATOR, 0, "+++"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("a+++.b"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.POSTFIX_OPERATOR, 0, "+++."));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("a +++b"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.PREFIX_OPERATOR, 0, "+++"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("*/"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.POSTFIX_OPERATOR, 0, "*/"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
     }
 }
