@@ -126,8 +126,8 @@ class SwiftLexerTest {
     }
 
     @org.junit.jupiter.api.Test
-    void getOperatorLiteral() {
-          
+      void getOperatorLiteral() {
+     
       Lexer lex = new SwiftLexer(new StringSource("a=b"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.EQUAL, 1, "="));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
@@ -168,8 +168,52 @@ class SwiftLexerTest {
         assertEquals(lex.getToken(), new Token(Token.TokenType.PREFIX_OPERATOR, 2, "+++"));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
 
+        lex = new SwiftLexer(new StringSource("@Application"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.AT, 2, "@"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("do { }"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.CURLY_L, 3, "{"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.CURLY_R, 5, "}"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("("));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.BRACKET_L, 0, "("));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource(")"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.BRACKET_R, 0, ")"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("["));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.SQUARE_L, 0, "["));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("]"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.SQUARE_R, 0, "]"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("&"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.AMPERSAND, 0, "&"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource(","));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.COMMA, 0, ","));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource(";"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.SEMICOLON, 0, ";"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource(":"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.COLON, 0, ":"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("lock->cmd"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.ARROW, 4, "->"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
         lex = new SwiftLexer(new StringSource("*/"));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
-
     }
 }
