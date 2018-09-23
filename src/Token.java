@@ -30,9 +30,11 @@ public class Token {
         AT,
         POUND,
         AMPERSAND,
+        PREFIX_AMPERSAND,
         ARROW,
         BACKTICK,
         QUESTION_MARK,
+        POSTFIX_QUESTION,
         EXCLAMATION_MARK,
 
         ERROR
