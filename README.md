@@ -44,7 +44,7 @@ To run the class file from console:
 To run the jar file:
 `java -jar [DesiredName].jar`
 
-The application will generate the "out.txt" file containing the result tokens or list with errors.
+The application will generate the "out.txt" file containing the result tokens or list of errors.
 
 
 
