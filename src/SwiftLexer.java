@@ -154,6 +154,13 @@ public class SwiftLexer extends Lexer {
             input.consume();
     }
 
+    /**
+     * If finds line comments skips all line.
+     * If finds start of multi line comment, seeks the end and skips.
+     * Calls getOperatorLiteral function if there is no comment or whitespace.
+     *
+     * @return null if comment or whitespace occurs
+     */
     private Token ignoreCommentsAndWhitespace() {
         while (SymbolClasses.isWhitespace(currentSymbol) || currentSymbol == '/') {
             if (currentSymbol == '/') {
@@ -271,6 +278,11 @@ public class SwiftLexer extends Lexer {
         return new Token(type, lastPos, builder.toString());
     }
 
+    /**
+     * Parses a token of type STRING_LITERAL
+     *
+     * @return found token
+     */
     Token getStringLiteral() {
         StringBuilder builder = new StringBuilder();
         builder.append((char) currentSymbol);
@@ -469,6 +481,12 @@ public class SwiftLexer extends Lexer {
         return out;
     }
 
+    /**
+     * Tries to parse a number literal token.
+     * Checks if it is float or integer.
+     *
+     * @return found token
+     */
     Token getNumberLiteral() {
         final String intSymbols = "0123456789";
         final String hexSymbols = "0123456789abcdefABCDEF";
@@ -619,6 +637,11 @@ public class SwiftLexer extends Lexer {
         return new Token(tokType, lastPos, builder.toString());
     }
 
+    /**
+     * Tries to parse a token of type EXPRESSION_LITERAL
+     *
+     * @return found token
+     */
     Token getExpressionLiteral() {
         StringBuilder builder = new StringBuilder();
         builder.append((char) currentSymbol);
@@ -639,6 +662,13 @@ public class SwiftLexer extends Lexer {
         // This method is somewhat bad, but that's what Apple uses in it's lexer, so it can be important
         return new Token(Token.TokenType.POUND, lastPos, "#");
     }
+
+    /**
+     * Tries to parse an operator token.
+     * Match identifiers formed out of punctuation.
+     *
+     * @return found type of operator token
+     */
 
     Token getOperatorLiteral() {
         StringBuilder builder = new StringBuilder();
@@ -713,7 +743,7 @@ public class SwiftLexer extends Lexer {
         } else if (operator.length() == 2) {
             if (operator.equals("->")) return new Token(Token.TokenType.ARROW, lastPos, operator);
             if (operator.equals("*/")) {
-                errors.add("Unexpected comment end"+ operator);
+                errors.add("Unexpected comment end" + operator);
                 return new Token(Token.TokenType.ERROR, lastPos, operator);
             }
         }
