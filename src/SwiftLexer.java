@@ -713,6 +713,8 @@ public class SwiftLexer extends Lexer {
         } else if (operator.length() == 2) {
             if (operator.equals("->")) return new Token(Token.TokenType.ARROW, lastPos, operator);
             if (operator.equals("*/")) {
+                errors.add("Unexpected comment end"+ operator);
+                return new Token(Token.TokenType.ERROR, lastPos, operator);
             }
         }
         if (leftB == rightB) return new Token(Token.TokenType.BINARY_OPERATOR, lastPos, operator);
