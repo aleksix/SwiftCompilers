@@ -239,8 +239,8 @@ class SwiftLexerTest {
         assertEquals(lex.getToken(), new Token(Token.TokenType.AMPERSAND, 0, "&"));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
 
-        lex = new SwiftLexer(new StringSource(","));
-        assertEquals(lex.getToken(), new Token(Token.TokenType.COMMA, 0, ","));
+        lex = new SwiftLexer(new StringSource("f1 , k"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.COMMA, 3, ","));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
 
         lex = new SwiftLexer(new StringSource(";"));
@@ -253,6 +253,14 @@ class SwiftLexerTest {
 
         lex = new SwiftLexer(new StringSource("lock->cmd"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.ARROW, 4, "->"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+     
+        lex = new SwiftLexer(new StringSource("x -= 2"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.BINARY_OPERATOR, 2, "-="));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+
+        lex = new SwiftLexer(new StringSource("false || true"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.BINARY_OPERATOR, 6, "||"));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
 
         lex = new SwiftLexer(new StringSource("*/"));
