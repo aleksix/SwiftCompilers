@@ -331,6 +331,11 @@ class SwiftLexerTest {
         assertEquals(lex.getToken(), new Token(Token.TokenType.BOOLEAN_LITERAL, 0, "false"));
         assertEquals(lex.getToken(), new Token(Token.TokenType.BINARY_OPERATOR, 6, "||"));
         assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
+     
+        lex = new SwiftLexer(new StringSource("f!"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.IDENTIFIER, 0, "f"));
+        assertEquals(lex.getToken(), new Token(Token.TokenType.EXCLAMATION_MARK, 1, "!"));
+        assertEquals(((SwiftLexer) lex).getErrors().size(), 0);
 
         lex = new SwiftLexer(new StringSource("*/"));
 //        assertEquals(((SwiftLexer) lex).getErrors().size(), 1);
