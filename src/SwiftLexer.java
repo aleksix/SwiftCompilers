@@ -745,7 +745,9 @@ public class SwiftLexer extends Lexer {
             if (operator.equals("}")) return new Token(Token.TokenType.CURLY_R, lastPos, operator);
             if (operator.equals("]")) return new Token(Token.TokenType.SQUARE_R, lastPos, operator);
             if (operator.equals(")")) return new Token(Token.TokenType.BRACKET_R, lastPos, operator);
-
+            if (operator.equals("&")) return new Token(Token.TokenType.AMPERSAND, lastPos, operator);
+            if (operator.equals("`")) return new Token(Token.TokenType.BACKTICK, lastPos, operator);
+          
             if (operator.equals(",")) return new Token(Token.TokenType.COMMA, lastPos, operator);
             if (operator.equals(";")) return new Token(Token.TokenType.SEMICOLON, lastPos, operator);
             if (operator.equals(":")) return new Token(Token.TokenType.COLON, lastPos, operator);
