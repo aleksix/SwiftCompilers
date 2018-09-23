@@ -716,6 +716,14 @@ public class SwiftLexer extends Lexer {
 
         if (SymbolClasses.isOperatorHead(currentSymbol)) {
             tokStart = (char) currentSymbol;
+          
+            if (tokStart == '{') return new Token(Token.TokenType.CURLY_L, lastPos, Character.toString(tokStart));
+            if (tokStart == '[')  return new Token(Token.TokenType.SQUARE_L, lastPos,Character.toString(tokStart));
+            if (tokStart == '(')  return new Token(Token.TokenType.BRACKET_L, lastPos, Character.toString(tokStart));
+            if (tokStart == '}')  return new Token(Token.TokenType.CURLY_R, lastPos, Character.toString(tokStart));
+            if (tokStart == ']')  return new Token(Token.TokenType.SQUARE_R, lastPos, Character.toString(tokStart));
+            if (tokStart == ')')  return new Token(Token.TokenType.BRACKET_R, lastPos, Character.toString(tokStart));
+           
             builder.append((char) currentSymbol);
             advance();
         }
@@ -759,12 +767,6 @@ public class SwiftLexer extends Lexer {
             }
 
             if (operator.equals("@")) return new Token(Token.TokenType.AT, lastPos, operator);
-            if (operator.equals("{")) return new Token(Token.TokenType.CURLY_L, lastPos, operator);
-            if (operator.equals("[")) return new Token(Token.TokenType.SQUARE_L, lastPos, operator);
-            if (operator.equals("(")) return new Token(Token.TokenType.BRACKET_L, lastPos, operator);
-            if (operator.equals("}")) return new Token(Token.TokenType.CURLY_R, lastPos, operator);
-            if (operator.equals("]")) return new Token(Token.TokenType.SQUARE_R, lastPos, operator);
-            if (operator.equals(")")) return new Token(Token.TokenType.BRACKET_R, lastPos, operator);
             if (operator.equals("&")) return new Token(Token.TokenType.AMPERSAND, lastPos, operator);
             if (operator.equals("`")) return new Token(Token.TokenType.BACKTICK, lastPos, operator);
 
